@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { Denicek, registerPrimitiveEdit } from "../../mod.ts";
+import { Denicek, registerPrimitiveEdit } from "@mydenicek/core";
 
 Deno.test("Formative: Hello World", () => {
   const initialDocument = {

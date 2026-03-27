@@ -84,6 +84,7 @@ From the repository root:
 ```sh
 deno check packages/core/mod.ts
 deno test --allow-all --no-check packages/core/tests
+deno test --allow-all --no-check packages/formative/tests
 deno test packages/core/tests/core-properties.test.ts --allow-all
 deno run packages/core/tools/core-random-fuzzer.ts
 ```

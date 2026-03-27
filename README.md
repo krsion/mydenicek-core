@@ -3,6 +3,7 @@
 TypeScript/Deno workspace for experimenting with the Denicek document model and building browser clients around it:
 
 - `packages/core` — the OT-based Denicek CRDT implementation
+- `packages/formative` — formative example scenarios that exercise the public core API
 - `packages/sync-server` — sync protocol, sync room, and server/client helpers
 - `apps/sync-server` — the runnable WebSocket sync server
 - `apps/playground` — the experimental playground for multi-peer DAG and sync exploration
@@ -103,7 +104,7 @@ deno task mywebnicek:dev
 From the repository root:
 
 ```sh
-deno lint packages/core packages/sync-server apps/sync-server
+deno lint packages/core packages/formative packages/sync-server apps/sync-server
 deno task check
 deno task test
 cd apps/playground && deno install && deno task build && deno task test
@@ -113,6 +114,7 @@ cd apps/mywebnicek && deno install && deno task build && deno task test
 ## Workspace README files
 
 - [Core package README](./packages/core/README.md)
+- [Formative examples README](./packages/formative/README.md)
 - [Sync server README](./packages/sync-server/README.md)
 - [Sync server app README](./apps/sync-server/README.md)
 - [Playground README](./apps/playground/README.md)

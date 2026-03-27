@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { Denicek } from "../../mod.ts";
+import { Denicek } from "@mydenicek/core";
 
 Deno.test("Formative: Traffic Accidents", () => {
   const peer = new Denicek("alice", {

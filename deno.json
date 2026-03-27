@@ -1,9 +1,9 @@
 {
   "nodeModulesDir": "auto",
-  "workspace": ["./packages/core", "./packages/sync-server", "./apps/sync-server", "./apps/playground", "./apps/mywebnicek"],
+  "workspace": ["./packages/core", "./packages/formative", "./packages/sync-server", "./apps/sync-server", "./apps/playground", "./apps/mywebnicek"],
   "tasks": {
     "check": "deno check packages/core/mod.ts && deno check packages/sync-server/mod.ts && deno check apps/sync-server/main.ts",
-    "test": "deno test --allow-all --no-check packages/core/tests && deno test --allow-read --allow-write packages/sync-server/tests",
+    "test": "deno test --allow-all --no-check packages/core/tests && deno test --allow-all --no-check packages/formative/tests && deno test --allow-read --allow-write packages/sync-server/tests",
     "property-test": "deno test packages/core/tests/core-properties.test.ts --allow-all",
     "random-fuzzer": "deno run packages/core/tools/core-random-fuzzer.ts",
     "sync-server": "deno run --allow-net --allow-read --allow-write --allow-env apps/sync-server/main.ts",
