@@ -23,7 +23,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     }
     enableRbacAuthorization: true
     enabledForTemplateDeployment: true
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
   }
 }
 

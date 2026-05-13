@@ -54,7 +54,7 @@ type ClientState = {
   /** Whether this client has passed initial document hash validation. */
   hashValidated: boolean;
   docId: string;
-  role: "viewer" | "editor" | null;
+  role: "viewer" | "editor";
   peerId: string;
   oid: string;
 };
@@ -259,7 +259,7 @@ export function createSyncServer(
       if (
         socket === changedSocket || state.roomId !== room.id ||
         socket.readyState !== WebSocket.OPEN || !state.hashValidated ||
-        state.role === null || state.docId !== eventDocId
+        state.docId !== eventDocId
       ) {
         continue;
       }
@@ -373,7 +373,7 @@ export function createSyncServer(
         if (clientState === undefined) {
           throw new Error("Connection is not authenticated.");
         }
-        const clientRoomId = clientState?.roomId ?? roomId;
+        const clientRoomId = clientState.roomId;
         if (message.roomId !== clientRoomId) {
           throw new Error(
             `Socket for room '${clientRoomId}' cannot sync room '${message.roomId}'.`,
@@ -411,7 +411,7 @@ export function createSyncServer(
               docId: clientState.docId,
               oid: clientState.oid,
               peerId: clientState.peerId,
-              role: clientState.role ?? "viewer",
+              role: clientState.role,
             },
             signedEvents: message.signedEvents,
             onPolicyViolation: (policyMessage: string) =>

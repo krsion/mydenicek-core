@@ -430,8 +430,8 @@ export function App() {
 
   useEffect(() => {
     if (!VITE_AUTH_ENABLED) return;
-    const oid = globalThis.localStorage?.getItem("mydenicek.auth.oid") ?? "";
-    const token = globalThis.localStorage?.getItem("mydenicek.auth.token") ??
+    const oid = globalThis.sessionStorage?.getItem("mydenicek.auth.oid") ?? "";
+    const token = globalThis.sessionStorage?.getItem("mydenicek.auth.token") ??
       "";
     if (!oid || !token) {
       return;
@@ -455,6 +455,9 @@ export function App() {
 
   const handleForgetDevice = useCallback(async () => {
     if (!authBootstrap || !deviceKeypair) return;
+    if (!globalThis.confirm("Forget this device and revoke its signing key?")) {
+      return;
+    }
     await revokePeerKey(VITE_ACL_URL, authBootstrap, deviceKeypair.deviceGuid);
     await clearStoredKeypair();
     setDeviceKeypair(null);
