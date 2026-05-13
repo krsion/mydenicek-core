@@ -4,6 +4,21 @@ import Fastify from "fastify";
 
 const app = Fastify({ logger: true });
 const aclByDoc = new Map<string, Map<string, AclEntry>>();
+const requestCounts = new Map<string, { count: number; resetAt: number }>();
+
+app.addHook("onRequest", async (request, reply) => {
+  const key = request.ip;
+  const now = Date.now();
+  const current = requestCounts.get(key);
+  if (!current || current.resetAt < now) {
+    requestCounts.set(key, { count: 1, resetAt: now + 60_000 });
+    return;
+  }
+  current.count += 1;
+  if (current.count > 120) {
+    return reply.code(429).send({ message: "Too many requests" });
+  }
+});
 
 app.addHook("preHandler", async (request) => {
   const header = request.headers.authorization;

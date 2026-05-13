@@ -1,15 +1,11 @@
 import { PublicClientApplication } from "@azure/msal-browser";
 
-// @ts-ignore: Vite injects import.meta.env at build time
 const VITE_AUTH_ENABLED: string | undefined = import.meta.env
   ?.VITE_AUTH_ENABLED;
-// @ts-ignore: Vite injects import.meta.env at build time
 const VITE_AUTH_CLIENT_ID: string | undefined = import.meta.env
   ?.VITE_AUTH_CLIENT_ID;
-// @ts-ignore: Vite injects import.meta.env at build time
 const VITE_AUTH_TENANT_ID: string | undefined = import.meta.env
   ?.VITE_AUTH_TENANT_ID;
-// @ts-ignore: Vite injects import.meta.env at build time
 const VITE_AUTH_SCOPE: string | undefined = import.meta.env?.VITE_AUTH_SCOPE;
 
 export const AUTH_ENABLED = VITE_AUTH_ENABLED === "true" &&

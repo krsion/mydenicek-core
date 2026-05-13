@@ -42,11 +42,11 @@ export async function verifyEntraToken(
     issuer: tenantId === "common" ? undefined : issuer,
   });
 
-  const oid = String(payload.oid ?? "");
-  const tid = String(payload.tid ?? "");
-  if (!oid || !tid) {
+  if (!payload.oid || !payload.tid) {
     throw new Error("Token missing required oid/tid claims.");
   }
+  const oid = String(payload.oid);
+  const tid = String(payload.tid);
 
   const roles = Array.isArray(payload.roles)
     ? payload.roles.map((role) => String(role))

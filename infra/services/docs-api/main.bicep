@@ -2,12 +2,14 @@ targetScope = 'subscription'
 
 param location string = deployment().location
 param prefix string = 'mydenicek'
-param serviceRgName string = '${prefix}-docs-api-rg'
+param computeRgName string = '${prefix}-docs-api-compute-rg'
+param dataRgName string = '${prefix}-docs-api-data-rg'
 param acrLoginServer string = ''
 param imageTag string = 'latest'
+var docsStorageAccountName = take(toLower(replace('${prefix}docs${uniqueString(subscription().id)}', '-', '')), 24)
 
-resource serviceRg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
-  name: serviceRgName
+resource computeRg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
+  name: computeRgName
   location: location
   tags: {
     app: 'mydenicek'
@@ -15,9 +17,19 @@ resource serviceRg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   }
 }
 
+resource dataRg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
+  name: dataRgName
+  location: location
+  tags: {
+    app: 'mydenicek'
+    service: 'docs-api'
+    tier: 'data'
+  }
+}
+
 module plan './appServicePlan.bicep' = {
   name: 'docs-api-plan'
-  scope: resourceGroup(serviceRg.name)
+  scope: resourceGroup(computeRg.name)
   params: {
     location: location
     planName: '${prefix}-docs-plan'
@@ -26,25 +38,26 @@ module plan './appServicePlan.bicep' = {
 
 module table './tableStorage.bicep' = {
   name: 'docs-api-table-storage'
-  scope: resourceGroup(serviceRg.name)
+  scope: resourceGroup(dataRg.name)
   params: {
     location: location
-    storageAccountName: take(toLower(replace('${prefix}docs${uniqueString(subscription().id)}', '-', '')), 24)
+    storageAccountName: docsStorageAccountName
+    principalId: web.outputs.principalId
   }
 }
 
 module web './webApp.bicep' = {
   name: 'docs-api-web'
-  scope: resourceGroup(serviceRg.name)
+  scope: resourceGroup(computeRg.name)
   params: {
     location: location
     appName: '${prefix}-docs-api'
     planId: plan.outputs.planId
     containerImage: '${acrLoginServer}/docs-api:${imageTag}'
-    storageAccountName: table.outputs.storageAccountName
+    storageAccountName: docsStorageAccountName
   }
 }
 
-output resourceGroupName string = serviceRg.name
+output computeResourceGroupName string = computeRg.name
+output dataResourceGroupName string = dataRg.name
 output principalId string = web.outputs.principalId
-// TODO: Add Storage Table Data Contributor assignment for docs-api managed identity.

@@ -15,7 +15,6 @@ import { INITIAL_DOCUMENT, initializeActions } from "./initializeDocument.ts";
 import { RawDocumentView } from "./RawDocumentView.tsx";
 import { RenderedDocument } from "./RenderedDocument.tsx";
 
-// @ts-ignore: Vite injects import.meta.env at build time
 const VITE_SYNC_URL: string | undefined = import.meta.env?.VITE_SYNC_URL;
 const SYNC_SERVER_URL: string = VITE_SYNC_URL ??
   (globalThis.location?.hostname === "localhost"

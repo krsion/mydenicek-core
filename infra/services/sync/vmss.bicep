@@ -5,7 +5,9 @@ param vmssName string
 param imageReferenceId string
 param containerImage string
 @description('SSH public key for VMSS admin user.')
-param adminSshPublicKey string = 'ssh-rsa TODO_REPLACE_WITH_REAL_KEY'
+param adminSshPublicKey string
+@description('Subnet resource ID for VMSS NIC configuration.')
+param subnetResourceId string
 
 var customData = base64('''
 #cloud-config
@@ -91,7 +93,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
                   name: 'ipconfig'
                   properties: {
                     subnet: {
-                      id: '/subscriptions/${subscription().subscriptionId}/resourceGroups/TODO/providers/Microsoft.Network/virtualNetworks/TODO/subnets/default'
+                      id: subnetResourceId
                     }
                   }
                 }

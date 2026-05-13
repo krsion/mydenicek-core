@@ -23,4 +23,4 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Deploy service
-        run: az deployment sub create --location westeurope --template-file infra/services/${{ matrix.service }}/main.bicep --parameters acrLoginServer=acrplaceholder.azurecr.io imageTag=latest
+        run: az deployment sub create --location westeurope --template-file infra/services/${{ matrix.service }}/main.bicep --parameters acrLoginServer=${{ vars.ACR_LOGIN_SERVER }} imageTag=latest

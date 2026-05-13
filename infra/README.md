@@ -47,6 +47,10 @@ Set repository secrets/variables:
 - `AZURE_CLIENT_ID` (app id)
 - `AZURE_TENANT_ID`
 - `AZURE_SUBSCRIPTION_ID`
+- `ACR_NAME` (for example `mydenicekacr1234`)
+- `ACR_LOGIN_SERVER` (for example `mydenicekacr1234.azurecr.io`)
+
+> The `subject` example above is pinned to branch `infra/az-104` as requested for this sprint. If workflows are executed from a different branch, create another federated credential with the matching `subject`.
 
 ## Scheduled teardown/spinup
 

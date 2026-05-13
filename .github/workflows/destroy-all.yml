@@ -26,8 +26,12 @@ jobs:
         run: |
           az group delete -n mydenicek-dev-shared-rg --yes --no-wait
           az group delete -n mydenicek-network-rg --yes --no-wait
-          az group delete -n mydenicek-sync-rg --yes --no-wait
-          az group delete -n mydenicek-docs-api-rg --yes --no-wait
-          az group delete -n mydenicek-acl-rg --yes --no-wait
-          az group delete -n mydenicek-attachments-rg --yes --no-wait
+          az group delete -n mydenicek-sync-compute-rg --yes --no-wait
+          az group delete -n mydenicek-sync-data-rg --yes --no-wait
+          az group delete -n mydenicek-docs-api-compute-rg --yes --no-wait
+          az group delete -n mydenicek-docs-api-data-rg --yes --no-wait
+          az group delete -n mydenicek-acl-compute-rg --yes --no-wait
+          az group delete -n mydenicek-acl-data-rg --yes --no-wait
+          az group delete -n mydenicek-attachments-compute-rg --yes --no-wait
+          az group delete -n mydenicek-attachments-data-rg --yes --no-wait
           az group delete -n mydenicek-monitor-rg --yes --no-wait

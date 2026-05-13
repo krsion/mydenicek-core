@@ -2,6 +2,7 @@ targetScope = 'resourceGroup'
 
 param location string
 param storageAccountName string
+param principalId string = ''
 
 resource sa 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageAccountName
@@ -24,6 +25,16 @@ resource appendContainer 'Microsoft.Storage/storageAccounts/blobServices/contain
   name: '${sa.name}/default/events'
   properties: {
     publicAccess: 'None'
+  }
+}
+
+resource blobContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
+  name: guid(sa.id, principalId, 'Storage Blob Data Contributor')
+  scope: sa
+  properties: {
+    principalId: principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+    principalType: 'ServicePrincipal'
   }
 }
 

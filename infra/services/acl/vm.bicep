@@ -3,7 +3,9 @@ targetScope = 'resourceGroup'
 param location string
 param vmName string
 @description('SSH public key for VM admin user.')
-param adminSshPublicKey string = 'ssh-rsa TODO_REPLACE_WITH_REAL_KEY'
+param adminSshPublicKey string
+@description('Network interface resource ID for ACL VM.')
+param networkInterfaceResourceId string
 
 resource vm 'Microsoft.Compute/virtualMachines@2024-03-01' = {
   name: vmName
@@ -56,7 +58,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-03-01' = {
     networkProfile: {
       networkInterfaces: [
         {
-          id: '/subscriptions/${subscription().subscriptionId}/resourceGroups/TODO/providers/Microsoft.Network/networkInterfaces/TODO'
+          id: networkInterfaceResourceId
         }
       ]
     }

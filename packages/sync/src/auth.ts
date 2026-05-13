@@ -28,8 +28,10 @@ export async function derivePeerId(
 
 function parseBearerToken(authHeader: string | null): string | undefined {
   if (!authHeader) return undefined;
-  const [scheme, token] = authHeader.split(" ");
-  if (scheme?.toLowerCase() !== "bearer" || !token) return undefined;
+  const parts = authHeader.trim().split(/\s+/);
+  if (parts.length !== 2) return undefined;
+  const [scheme, token] = parts;
+  if (scheme.toLowerCase() !== "bearer" || !token) return undefined;
   return token;
 }
 
