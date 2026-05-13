@@ -33,7 +33,7 @@ app.addHook("onRequest", async (request, reply) => {
   }
 });
 
-async function verifyRequestToken(token: string | undefined) {
+async function requireBearerToken(token: string | undefined) {
   if (!token) throw new Error("Missing bearer token.");
   return verifyEntraToken(token);
 }
@@ -41,7 +41,7 @@ async function verifyRequestToken(token: string | undefined) {
 app.addHook("preHandler", async (request) => {
   const header = request.headers.authorization;
   const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
-  const claims = await verifyRequestToken(token);
+  const claims = await requireBearerToken(token);
   request.headers["x-user-oid"] = claims.oid;
 });
 

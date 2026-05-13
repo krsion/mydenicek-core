@@ -31,6 +31,8 @@ if (msal) {
 }
 
 function getScopes(): string[] {
+  // Configure VITE_AUTH_SCOPE to request an API scope; fallback scopes are
+  // suitable for identity only.
   return VITE_AUTH_SCOPE ? [VITE_AUTH_SCOPE] : ["openid", "profile"];
 }
 

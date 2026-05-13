@@ -2,6 +2,7 @@ name: Scheduled Spinup
 
 on:
   schedule:
+    # 05:00 UTC = 07:00 CEST (summer) / 06:00 CET (winter)
     - cron: '0 5 * * *'
   workflow_dispatch:
 

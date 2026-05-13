@@ -2,6 +2,7 @@ name: Scheduled Teardown
 
 on:
   schedule:
+    # 20:00 UTC = 22:00 CEST (summer) / 21:00 CET (winter)
     - cron: '0 20 * * *'
   workflow_dispatch:
 

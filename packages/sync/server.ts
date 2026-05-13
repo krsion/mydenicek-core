@@ -316,7 +316,8 @@ export function createSyncServer(
     try {
       const authenticatedPeer = await resolveAuthenticatedPeer(request, url);
       authenticatedPeerId = authenticatedPeer?.peerId;
-    } catch (_error) {
+    } catch (error) {
+      console.error("Authentication failed for websocket upgrade:", error);
       return new Response("Unauthorized", { status: 401 });
     }
 

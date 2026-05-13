@@ -3,6 +3,7 @@ targetScope = 'resourceGroup'
 param location string
 param name string
 param addressPrefix string
+param subnetPrefix string
 
 resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
   name: name
@@ -20,7 +21,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
       {
         name: 'default'
         properties: {
-          addressPrefix: replace(addressPrefix, '/16', '/24')
+          addressPrefix: subnetPrefix
         }
       }
     ]

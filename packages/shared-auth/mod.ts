@@ -11,6 +11,8 @@ export interface VerifiedEntraToken {
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
 function readTenantId(): string {
+  // Multi-tenant default for learning environments; set ENTRA_TENANT_ID to
+  // enforce a single tenant.
   return Deno.env.get("ENTRA_TENANT_ID") ?? "common";
 }
 

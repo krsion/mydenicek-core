@@ -40,6 +40,7 @@ module spokeFrontend './spokeVnet.bicep' = {
     location: location
     name: '${prefix}-frontend-vnet'
     addressPrefix: '10.1.0.0/16'
+    subnetPrefix: '10.1.0.0/24'
   }
 }
 
@@ -50,6 +51,7 @@ module spokeSync './spokeVnet.bicep' = {
     location: location
     name: '${prefix}-sync-vnet'
     addressPrefix: '10.2.0.0/16'
+    subnetPrefix: '10.2.0.0/24'
   }
 }
 
@@ -60,6 +62,7 @@ module spokeApi './spokeVnet.bicep' = {
     location: location
     name: '${prefix}-api-vnet'
     addressPrefix: '10.3.0.0/16'
+    subnetPrefix: '10.3.0.0/24'
   }
 }
 
@@ -70,6 +73,7 @@ module spokeData './spokeVnet.bicep' = {
     location: location
     name: '${prefix}-data-vnet'
     addressPrefix: '10.4.0.0/16'
+    subnetPrefix: '10.4.0.0/24'
   }
 }
 
