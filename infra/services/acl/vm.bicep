@@ -151,22 +151,11 @@ resource customScriptExtension 'Microsoft.Compute/virtualMachines/extensions@202
     type: 'CustomScript'
     typeHandlerVersion: '2.1'
     autoUpgradeMinorVersion: true
-    settings: {
-      script: base64('''
-#!/bin/bash
-set -e
-# Format and mount data disk if not already mounted
-if ! blkid /dev/sdc; then
-  mkfs.ext4 /dev/sdc
-fi
-mkdir -p /data
-mount /dev/sdc /data
-echo "/dev/sdc /data ext4 defaults,nofail 0 2" >> /etc/fstab
-# TODO: pull and start ACL service container or binary
-''')
-    }
     protectedSettings: {
-      commandToExecute: 'STORAGE_ACCOUNT_NAME="${storageAccountName}" APPINSIGHTS_CONN_STR="${appInsightsConnStr}" AUTH_ENABLED="${string(authEnabled)}" bash ./script.sh'
+      // Env vars are exported first so the shell script body can read them at runtime.
+      // Bicep interpolation (${...}) resolves values at deploy time; $VAR inside the script
+      // body expands at runtime when bash runs the inline command.
+      commandToExecute: 'export STORAGE_ACCOUNT_NAME="${storageAccountName}" APPINSIGHTS_CONN_STR="${appInsightsConnStr}" AUTH_ENABLED="${string(authEnabled)}" && bash -c \'set -e; DATA_DISK=$(readlink -f /dev/disk/azure/scsi1/lun0); blkid "$DATA_DISK" 2>/dev/null || mkfs.ext4 "$DATA_DISK"; mkdir -p /data; mount "$DATA_DISK" /data; grep -q "$DATA_DISK" /etc/fstab || echo "$DATA_DISK /data ext4 defaults,nofail 0 2" >> /etc/fstab\''
     }
   }
 }

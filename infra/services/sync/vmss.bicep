@@ -21,6 +21,9 @@ param appInsightsConnStr string
 @description('Whether to enable authentication in the app.')
 param authEnabled bool = true
 
+@description('Admin username for the OS. Must not be a reserved name.')
+param adminUsername string = 'azureuser'
+
 @description('Resource tags.')
 param tags object = {}
 
@@ -70,7 +73,7 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
       }
       osProfile: {
         computerNamePrefix: 'sync'
-        adminUsername: 'azureuser'
+        adminUsername: adminUsername
         // SSH public key should be injected via Key Vault reference in a real deployment
         // TODO: replace with actual SSH public key or Key Vault reference
         linuxConfiguration: {
@@ -115,23 +118,11 @@ resource vmss 'Microsoft.Compute/virtualMachineScaleSets@2024-03-01' = {
               type: 'CustomScript'
               typeHandlerVersion: '2.1'
               autoUpgradeMinorVersion: true
-              settings: {
-                // Script: login to ACR via managed identity and run the sync container
-                script: base64('''
-#!/bin/bash
-set -e
-az login --identity
-az acr login --name ${ACR_LOGIN_SERVER}
-docker pull ${ACR_LOGIN_SERVER}/sync:${IMAGE_TAG}
-docker run -d --restart=unless-stopped \
-  -e APPLICATIONINSIGHTS_CONNECTION_STRING="${APPINSIGHTS_CONN_STR}" \
-  -e AUTH_ENABLED="${AUTH_ENABLED}" \
-  -p 8080:8080 \
-  ${ACR_LOGIN_SERVER}/sync:${IMAGE_TAG}
-''')
-              }
+              settings: {}
               protectedSettings: {
-                commandToExecute: 'ACR_LOGIN_SERVER="${acrLoginServer}" IMAGE_TAG="${imageTag}" APPINSIGHTS_CONN_STR="${appInsightsConnStr}" AUTH_ENABLED="${string(authEnabled)}" bash ./script.sh'
+                // Variables are injected via commandToExecute; the script reads them from the environment.
+                // ACR_NAME is the registry name only (no domain suffix) as required by 'az acr login --name'.
+                commandToExecute: 'export ACR_NAME="${replace(acrLoginServer, '.azurecr.io', '')}" ACR_LOGIN_SERVER="${acrLoginServer}" IMAGE_TAG="${imageTag}" APPINSIGHTS_CONN_STR="${appInsightsConnStr}" AUTH_ENABLED="${string(authEnabled)}" && az login --identity && az acr login --name "$ACR_NAME" && docker pull "${acrLoginServer}/sync:${imageTag}" && docker run -d --restart=unless-stopped -e APPLICATIONINSIGHTS_CONNECTION_STRING="$APPINSIGHTS_CONN_STR" -e AUTH_ENABLED="$AUTH_ENABLED" -p 8080:8080 "${acrLoginServer}/sync:${imageTag}"'
               }
             }
           }
