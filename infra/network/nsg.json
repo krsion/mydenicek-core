@@ -1,0 +1,143 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "12291557797280134154"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the NSG."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the NSG."
+      }
+    },
+    "asgId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Application Security Group used for workload NICs."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Allow-HTTPS-Inbound",
+            "properties": {
+              "priority": 100,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "Tcp",
+              "sourceAddressPrefix": "Internet",
+              "sourcePortRange": "*",
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[parameters('asgId')]"
+                }
+              ],
+              "destinationPortRange": "443",
+              "description": "Allow HTTPS from the Internet to workload nodes."
+            }
+          },
+          {
+            "name": "Allow-WebSocket-Inbound",
+            "properties": {
+              "priority": 110,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "Tcp",
+              "sourceAddressPrefix": "Internet",
+              "sourcePortRange": "*",
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[parameters('asgId')]"
+                }
+              ],
+              "destinationPortRange": "8787",
+              "description": "Allow WebSocket traffic (port 8787) from the Internet to workload nodes."
+            }
+          },
+          {
+            "name": "Allow-SSH-From-Mgmt",
+            "properties": {
+              "priority": 200,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "Tcp",
+              "sourceAddressPrefix": "10.0.2.0/24",
+              "sourcePortRange": "*",
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[parameters('asgId')]"
+                }
+              ],
+              "destinationPortRange": "22",
+              "description": "Allow SSH from the hub management subnet only."
+            }
+          },
+          {
+            "name": "Allow-AzureLoadBalancer",
+            "properties": {
+              "priority": 900,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "*",
+              "sourceAddressPrefix": "AzureLoadBalancer",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "*",
+              "description": "Required for Azure Load Balancer health probes."
+            }
+          },
+          {
+            "name": "Deny-All-Inbound",
+            "properties": {
+              "priority": 4096,
+              "direction": "Inbound",
+              "access": "Deny",
+              "protocol": "*",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "*",
+              "description": "Deny all other inbound traffic."
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "nsgId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('name'))]"
+    },
+    "nsgName": {
+      "type": "string",
+      "value": "[parameters('name')]"
+    }
+  }
+}

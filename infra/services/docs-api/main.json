@@ -1,0 +1,532 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "12235360458799407866"
+    }
+  },
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "allowedValues": [
+        "dev",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Environment name (dev or prod)."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": {
+        "description": "Azure region."
+      }
+    },
+    "subnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the workload subnet for VNet integration."
+      }
+    },
+    "lawResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics Workspace."
+      }
+    },
+    "appInsightsConnStr": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Insights connection string."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "variables": {
+    "tableStorageDeplName": "[format('sadocsapi{0}{1}', parameters('environment'), uniqueString(resourceGroup().id))]",
+    "webAppDeplName": "[format('app-docs-api-{0}', parameters('environment'))]",
+    "storageTableDataContributorRoleId": "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, variables('tableStorageDeplName'), variables('webAppDeplName'), variables('storageTableDataContributorRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageTableDataContributorRoleId'))]",
+        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('webapp-docs-api-{0}', parameters('environment'))), '2025-04-01').outputs.principalId.value]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('webapp-docs-api-{0}', parameters('environment')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('plan-docs-api-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('plan-docs-api-{0}', parameters('environment'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "7180271689163601232"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the App Service Plan."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-12-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "linux",
+              "sku": {
+                "name": "B1",
+                "tier": "Basic",
+                "size": "B1",
+                "family": "B",
+                "capacity": 1
+              },
+              "properties": {
+                "reserved": true
+              }
+            }
+          ],
+          "outputs": {
+            "planId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/serverfarms', parameters('name'))]"
+            },
+            "planName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('storage-docs-api-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('sadocsapi{0}{1}', parameters('environment'), uniqueString(resourceGroup().id))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "privateEndpointSubnetId": {
+            "value": "TODO_PE_SUBNET_ID"
+          },
+          "privateDnsZoneId": {
+            "value": "TODO_TABLE_DNS_ZONE_ID"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "15866949422493351493"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the storage account (must be globally unique, 3-24 lowercase alphanumeric)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "privateEndpointSubnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the private endpoint subnet."
+              }
+            },
+            "privateDnsZoneId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the privatelink.table.core.windows.net private DNS zone."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "properties": {
+                "accessTier": "Hot",
+                "allowSharedKeyAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true,
+                "publicNetworkAccess": "Disabled",
+                "networkAcls": {
+                  "bypass": "AzureServices",
+                  "defaultAction": "Deny"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/tableServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', 'docs')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/tableServices', parameters('name'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2023-11-01",
+              "name": "[format('pe-table-{0}', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('privateEndpointSubnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('plsc-table-{0}', parameters('name'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]",
+                      "groupIds": [
+                        "table"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', format('pe-table-{0}', parameters('name')), format('dzg-table-{0}', parameters('name')))]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "privatelink-table",
+                    "properties": {
+                      "privateDnsZoneId": "[parameters('privateDnsZoneId')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-table-{0}', parameters('name')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+            },
+            "storageAccountName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "tableEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('name')), '2023-05-01').primaryEndpoints.table]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('webapp-docs-api-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('app-docs-api-{0}', parameters('environment'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "planId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('plan-docs-api-{0}', parameters('environment'))), '2025-04-01').outputs.planId.value]"
+          },
+          "subnetId": {
+            "value": "[parameters('subnetId')]"
+          },
+          "appInsightsConnStr": {
+            "value": "[parameters('appInsightsConnStr')]"
+          },
+          "authEnabled": {
+            "value": true
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "5274096175025877581"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Web App."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "planId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the App Service Plan."
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the subnet for VNet integration."
+              }
+            },
+            "appInsightsConnStr": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights connection string."
+              }
+            },
+            "authEnabled": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Whether to enable authentication in the app."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-12-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "serverFarmId": "[parameters('planId')]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "linuxFxVersion": "NODE|20-lts",
+                  "alwaysOn": true,
+                  "ftpsState": "Disabled",
+                  "minTlsVersion": "1.2",
+                  "appSettings": [
+                    {
+                      "name": "WEBSITE_RUN_FROM_PACKAGE",
+                      "value": "1"
+                    },
+                    {
+                      "name": "AUTH_ENABLED",
+                      "value": "[string(parameters('authEnabled'))]"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsConnStr')]"
+                    }
+                  ]
+                },
+                "virtualNetworkSubnetId": "[parameters('subnetId')]",
+                "vnetRouteAllEnabled": true
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites/slots",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'staging')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "serverFarmId": "[parameters('planId')]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "linuxFxVersion": "NODE|20-lts",
+                  "alwaysOn": false,
+                  "ftpsState": "Disabled",
+                  "minTlsVersion": "1.2",
+                  "appSettings": [
+                    {
+                      "name": "WEBSITE_RUN_FROM_PACKAGE",
+                      "value": "1"
+                    },
+                    {
+                      "name": "AUTH_ENABLED",
+                      "value": "[string(parameters('authEnabled'))]"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsConnStr')]"
+                    }
+                  ]
+                },
+                "virtualNetworkSubnetId": "[parameters('subnetId')]",
+                "vnetRouteAllEnabled": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "webAppId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/sites', parameters('name'))]"
+            },
+            "webAppName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "defaultHostName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('name')), '2023-12-01').defaultHostName]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('name')), '2023-12-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('plan-docs-api-{0}', parameters('environment')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "lawResourceId": {
+      "type": "string",
+      "value": "[parameters('lawResourceId')]"
+    },
+    "webAppId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('webapp-docs-api-{0}', parameters('environment'))), '2025-04-01').outputs.webAppId.value]"
+    },
+    "storageAccountId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-docs-api-{0}', parameters('environment'))), '2025-04-01').outputs.storageAccountId.value]"
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "2318323042940282502"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the scheduled query rules."
+      }
+    },
+    "lawId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics Workspace to query."
+      }
+    },
+    "actionGroupId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Action Group to trigger."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-03-15-preview",
+      "name": "alert-signature-failures",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "description": "Fires when CRDT event signature verification failures exceed threshold.",
+        "enabled": true,
+        "severity": 1,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT5M",
+        "scopes": [
+          "[parameters('lawId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AppTraces\n| where Message contains \"signature-failure\"\n| extend docId = tostring(Properties[\"docId\"]), peerId = tostring(Properties[\"peerId\"]), reason = tostring(Properties[\"reason\"])\n| summarize Failures = count() by docId, peerId, reason, bin(TimeGenerated, 5m)\n| where Failures > 0\n",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[parameters('actionGroupId')]"
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-03-15-preview",
+      "name": "alert-failed-signins",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "description": "Fires when a single user exceeds 5 failed sign-ins in 5 minutes.",
+        "enabled": true,
+        "severity": 2,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT5M",
+        "scopes": [
+          "[parameters('lawId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "SigninLogs\n| where ResultType != 0\n| where AppDisplayName == \"mydenicek\"\n| summarize FailedAttempts = count() by UserPrincipalName, bin(TimeGenerated, 5m)\n| where FailedAttempts > 5\n",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            "[parameters('actionGroupId')]"
+          ]
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "signatureFailuresAlertId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/scheduledQueryRules', 'alert-signature-failures')]"
+    },
+    "failedSignInsAlertId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/scheduledQueryRules', 'alert-failed-signins')]"
+    }
+  }
+}

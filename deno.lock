@@ -741,9 +741,32 @@
   },
   "workspace": {
     "members": {
+      "apps/acl": {
+        "dependencies": [
+          "npm:@azure/data-tables@^13.3.0",
+          "npm:@azure/identity@^4.4.1",
+          "npm:fastify@^4.28.1"
+        ]
+      },
+      "apps/attachments": {
+        "dependencies": [
+          "npm:@azure/identity@^4.4.1",
+          "npm:@azure/storage-blob@^12.25.0",
+          "npm:fastify@^4.28.1"
+        ]
+      },
+      "apps/docs-api": {
+        "dependencies": [
+          "npm:@azure/data-tables@^13.3.0",
+          "npm:@azure/identity@^4.4.1",
+          "npm:fastify@^4.28.1"
+        ]
+      },
       "apps/mywebnicek": {
         "dependencies": [
           "jsr:@std/data-structures@1",
+          "npm:@azure/msal-browser@^3.26.1",
+          "npm:@azure/msal-react@^2.1.1",
           "npm:@deno/vite-plugin@1",
           "npm:@vitejs/plugin-react@^5.1.0",
           "npm:react-dom@^19.2.0",
@@ -758,11 +781,21 @@
           "npm:fast-check@^4.5.3"
         ]
       },
+      "packages/crypto": {
+        "dependencies": [
+          "npm:@noble/ed25519@^2.1.0"
+        ]
+      },
       "packages/react": {
         "dependencies": [
           "jsr:@mydenicek/core@0.5",
           "jsr:@mydenicek/sync@0.1",
           "npm:react@19"
+        ]
+      },
+      "packages/shared-auth": {
+        "dependencies": [
+          "npm:jose@^5.9.6"
         ]
       }
     }

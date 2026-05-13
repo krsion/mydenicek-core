@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "3141824196613851667"
+    }
+  },
+  "parameters": {
+    "hubVnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the hub VNet resource."
+      }
+    },
+    "spokeVnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the spoke VNet resource."
+      }
+    },
+    "hubVnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the hub VNet."
+      }
+    },
+    "spokeVnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the spoke VNet."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}/{1}', parameters('hubVnetName'), format('peer-hub-to-{0}', parameters('spokeVnetName')))]",
+      "properties": {
+        "remoteVirtualNetwork": {
+          "id": "[parameters('spokeVnetId')]"
+        },
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": false,
+        "useRemoteGateways": false
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "apiVersion": "2023-11-01",
+      "name": "[format('{0}/{1}', parameters('spokeVnetName'), format('peer-{0}-to-hub', parameters('spokeVnetName')))]",
+      "properties": {
+        "remoteVirtualNetwork": {
+          "id": "[parameters('hubVnetId')]"
+        },
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": false,
+        "useRemoteGateways": false
+      }
+    }
+  ],
+  "outputs": {
+    "hubToSpokePeeringId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/virtualNetworks/virtualNetworkPeerings', parameters('hubVnetName'), format('peer-hub-to-{0}', parameters('spokeVnetName')))]"
+    },
+    "spokeToHubPeeringId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/virtualNetworks/virtualNetworkPeerings', parameters('spokeVnetName'), format('peer-{0}-to-hub', parameters('spokeVnetName')))]"
+    }
+  }
+}

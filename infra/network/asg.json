@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "6005236466878460145"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Application Security Group."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the ASG."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/applicationSecurityGroups",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {}
+    }
+  ],
+  "outputs": {
+    "asgId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/applicationSecurityGroups', parameters('name'))]"
+    },
+    "asgName": {
+      "type": "string",
+      "value": "[parameters('name')]"
+    }
+  }
+}

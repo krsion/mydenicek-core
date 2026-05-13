@@ -1,0 +1,94 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "5182369163727600462"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the storage account (must be globally unique, 3-24 lowercase alphanumeric)."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region."
+      }
+    },
+    "shareName": {
+      "type": "string",
+      "defaultValue": "shared",
+      "metadata": {
+        "description": "Name of the Azure Files SMB share."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "properties": {
+        "accessTier": "Hot",
+        "allowSharedKeyAccess": true,
+        "minimumTlsVersion": "TLS1_2",
+        "supportsHttpsTrafficOnly": true,
+        "publicNetworkAccess": "Enabled",
+        "largeFileSharesState": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/fileServices",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', parameters('shareName'))]",
+      "properties": {
+        "shareQuota": 10,
+        "enabledProtocols": "SMB"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('name'), 'default')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "storageAccountId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[parameters('name')]"
+    },
+    "fileShareName": {
+      "type": "string",
+      "value": "[parameters('shareName')]"
+    }
+  }
+}

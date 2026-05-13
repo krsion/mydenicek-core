@@ -1,0 +1,120 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "13850315146324189724"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Recovery Services Vault."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region."
+      }
+    },
+    "vmId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the VM to protect."
+      }
+    },
+    "vmName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the VM (used in backup item name)."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.RecoveryServices/vaults",
+      "apiVersion": "2024-04-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "RS0",
+        "tier": "Standard"
+      },
+      "properties": {
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.RecoveryServices/vaults/backupPolicies",
+      "apiVersion": "2024-04-01",
+      "name": "[format('{0}/{1}', parameters('name'), 'policy-daily-7d')]",
+      "properties": {
+        "backupManagementType": "AzureIaasVM",
+        "instantRpRetentionRangeInDays": 2,
+        "schedulePolicy": {
+          "schedulePolicyType": "SimpleSchedulePolicy",
+          "scheduleRunFrequency": "Daily",
+          "scheduleRunTimes": [
+            "2024-01-01T02:00:00Z"
+          ]
+        },
+        "retentionPolicy": {
+          "retentionPolicyType": "LongTermRetentionPolicy",
+          "dailySchedule": {
+            "retentionTimes": [
+              "2024-01-01T02:00:00Z"
+            ],
+            "retentionDuration": {
+              "count": 7,
+              "durationType": "Days"
+            }
+          }
+        },
+        "timeZone": "UTC"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.RecoveryServices/vaults', parameters('name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems",
+      "apiVersion": "2024-04-01",
+      "name": "[format('{0}/Azure/iaasvmcontainerv2;{1};{2}/vm;iaasvmcontainerv2;{3};{4}', parameters('name'), resourceGroup().name, parameters('vmName'), resourceGroup().name, parameters('vmName'))]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "protectedItemType": "Microsoft.Compute/virtualMachines",
+        "policyId": "[resourceId('Microsoft.RecoveryServices/vaults/backupPolicies', parameters('name'), 'policy-daily-7d')]",
+        "sourceResourceId": "[parameters('vmId')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.RecoveryServices/vaults/backupPolicies', parameters('name'), 'policy-daily-7d')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "vaultId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.RecoveryServices/vaults', parameters('name'))]"
+    },
+    "vaultName": {
+      "type": "string",
+      "value": "[parameters('name')]"
+    },
+    "backupPolicyId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.RecoveryServices/vaults/backupPolicies', parameters('name'), 'policy-daily-7d')]"
+    }
+  }
+}

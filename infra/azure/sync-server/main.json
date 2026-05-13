@@ -1,0 +1,304 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "13128226652995078039"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for the deployment."
+      }
+    },
+    "containerRegistryName": {
+      "type": "string",
+      "metadata": {
+        "description": "Globally unique name of the Azure Container Registry."
+      }
+    },
+    "containerAppEnvironmentName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Container Apps managed environment."
+      }
+    },
+    "containerAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Globally unique name of the sync server container app."
+      }
+    },
+    "persistenceStorageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Globally unique name of the persistence storage account."
+      }
+    },
+    "persistenceShareName": {
+      "type": "string",
+      "defaultValue": "sync-data",
+      "metadata": {
+        "description": "Azure Files share name used for sync-server persistence."
+      }
+    },
+    "containerImageRepository": {
+      "type": "string",
+      "defaultValue": "sync-server",
+      "metadata": {
+        "description": "Container image repository name, for example sync-server."
+      }
+    },
+    "containerImageTag": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Container image tag to deploy."
+      }
+    },
+    "containerImageName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional fully qualified container image name. When empty, the image is resolved from the registry, repository, and tag parameters."
+      }
+    },
+    "containerPort": {
+      "type": "int",
+      "defaultValue": 8080,
+      "metadata": {
+        "description": "Container port exposed through Azure Container Apps ingress."
+      }
+    },
+    "healthCheckPath": {
+      "type": "string",
+      "defaultValue": "/healthz",
+      "metadata": {
+        "description": "HTTP path used for readiness and liveness probes, and for the health-check output."
+      }
+    },
+    "enableHealthProbes": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Whether to configure readiness and liveness probes for the container."
+      }
+    },
+    "persistencePath": {
+      "type": "string",
+      "defaultValue": "/mnt/sync-data",
+      "metadata": {
+        "description": "Path inside the container where the Azure Files share is mounted."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Optional tags applied to Azure resources."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2023-07-01",
+      "name": "[parameters('containerRegistryName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Basic"
+      },
+      "properties": {
+        "adminUserEnabled": true
+      },
+      "tags": "[parameters('tags')]"
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('containerAppEnvironmentName')]",
+      "location": "[parameters('location')]",
+      "properties": {},
+      "tags": "[parameters('tags')]"
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('persistenceStorageAccountName')]",
+      "location": "[parameters('location')]",
+      "kind": "StorageV2",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "properties": {
+        "accessTier": "Hot",
+        "allowBlobPublicAccess": false,
+        "allowSharedKeyAccess": true,
+        "minimumTlsVersion": "TLS1_2",
+        "supportsHttpsTrafficOnly": true
+      },
+      "tags": "[parameters('tags')]"
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/fileServices",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', parameters('persistenceStorageAccountName'), 'default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('persistenceStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}', parameters('persistenceStorageAccountName'), 'default', parameters('persistenceShareName'))]",
+      "properties": {
+        "enabledProtocols": "SMB",
+        "shareQuota": 10
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('persistenceStorageAccountName'), 'default')]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments/storages",
+      "apiVersion": "2024-03-01",
+      "name": "[format('{0}/{1}', parameters('containerAppEnvironmentName'), 'syncdata')]",
+      "properties": {
+        "azureFile": {
+          "accessMode": "ReadWrite",
+          "accountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('persistenceStorageAccountName')), '2023-05-01').keys[0].value]",
+          "accountName": "[parameters('persistenceStorageAccountName')]",
+          "shareName": "[parameters('persistenceShareName')]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvironmentName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', parameters('persistenceStorageAccountName'), 'default', parameters('persistenceShareName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('persistenceStorageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('containerAppName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "secrets": [
+            {
+              "name": "acr-password",
+              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').passwords[0].value]"
+            }
+          ],
+          "ingress": {
+            "allowInsecure": false,
+            "external": true,
+            "targetPort": "[parameters('containerPort')]",
+            "transport": "auto"
+          },
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]",
+              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').username]",
+              "passwordSecretRef": "acr-password"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "sync-server",
+              "image": "[if(empty(parameters('containerImageName')), format('{0}/{1}:{2}', reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer, parameters('containerImageRepository'), parameters('containerImageTag')), parameters('containerImageName'))]",
+              "env": [
+                {
+                  "name": "HOSTNAME",
+                  "value": "0.0.0.0"
+                },
+                {
+                  "name": "PERSISTENCE_PATH",
+                  "value": "[parameters('persistencePath')]"
+                },
+                {
+                  "name": "PORT",
+                  "value": "[format('{0}', parameters('containerPort'))]"
+                }
+              ],
+              "probes": "[if(parameters('enableHealthProbes'), createArray(createObject('type', 'Liveness', 'httpGet', createObject('path', parameters('healthCheckPath'), 'port', parameters('containerPort')), 'initialDelaySeconds', 10, 'periodSeconds', 30), createObject('type', 'Readiness', 'httpGet', createObject('path', parameters('healthCheckPath'), 'port', parameters('containerPort')), 'initialDelaySeconds', 5, 'periodSeconds', 15)), createArray())]",
+              "resources": {
+                "cpu": "[json('0.25')]",
+                "memory": "0.5Gi"
+              },
+              "volumeMounts": [
+                {
+                  "mountPath": "[parameters('persistencePath')]",
+                  "volumeName": "syncdata"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 0,
+            "maxReplicas": 1
+          },
+          "volumes": [
+            {
+              "name": "syncdata",
+              "storageName": "syncdata",
+              "storageType": "AzureFile"
+            }
+          ]
+        }
+      },
+      "tags": "[parameters('tags')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvironmentName'))]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments/storages', parameters('containerAppEnvironmentName'), 'syncdata')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "containerAppEnvironmentId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppEnvironmentName'))]"
+    },
+    "containerAppUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', parameters('containerAppName')), '2024-03-01').latestRevisionFqdn)]"
+    },
+    "containerImage": {
+      "type": "string",
+      "value": "[if(empty(parameters('containerImageName')), format('{0}/{1}:{2}', reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer, parameters('containerImageRepository'), parameters('containerImageTag')), parameters('containerImageName'))]"
+    },
+    "containerRegistryLoginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-07-01').loginServer]"
+    },
+    "healthCheckUrl": {
+      "type": "string",
+      "value": "[format('https://{0}{1}', reference(resourceId('Microsoft.App/containerApps', parameters('containerAppName')), '2024-03-01').latestRevisionFqdn, parameters('healthCheckPath'))]"
+    },
+    "persistenceShareName": {
+      "type": "string",
+      "value": "[parameters('persistenceShareName')]"
+    },
+    "persistenceStorageAccountName": {
+      "type": "string",
+      "value": "[parameters('persistenceStorageAccountName')]"
+    },
+    "webSocketSyncUrl": {
+      "type": "string",
+      "value": "[format('wss://{0}/sync', reference(resourceId('Microsoft.App/containerApps', parameters('containerAppName')), '2024-03-01').latestRevisionFqdn)]"
+    }
+  }
+}

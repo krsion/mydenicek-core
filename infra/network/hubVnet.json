@@ -1,0 +1,92 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "11436025370466899147"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the hub VNet."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the hub VNet."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "GatewaySubnet",
+            "properties": {
+              "addressPrefix": "10.0.0.0/27"
+            }
+          },
+          {
+            "name": "AzureBastionSubnet",
+            "properties": {
+              "addressPrefix": "10.0.1.0/26"
+            }
+          },
+          {
+            "name": "mgmt",
+            "properties": {
+              "addressPrefix": "10.0.2.0/24"
+            }
+          },
+          {
+            "name": "shared",
+            "properties": {
+              "addressPrefix": "10.0.3.0/24"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "vnetId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('name'))]"
+    },
+    "vnetName": {
+      "type": "string",
+      "value": "[parameters('name')]"
+    },
+    "sharedSubnetId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', parameters('name')), '2023-11-01').subnets[3].id]"
+    },
+    "mgmtSubnetId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', parameters('name')), '2023-11-01').subnets[2].id]"
+    }
+  }
+}

@@ -1,0 +1,206 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "13625559526881898447"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "global",
+      "metadata": {
+        "description": "Location for alert rules (use \"global\" for activity log alerts)."
+      }
+    },
+    "actionGroupId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Action Group to trigger."
+      }
+    },
+    "syncVmssId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the sync VMSS."
+      }
+    },
+    "docsAppId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the docs-api Web App."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "alert-vmss-cpu-high",
+      "location": "global",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "description": "Fires when sync VMSS average CPU exceeds 80% for 5 minutes.",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[parameters('syncVmssId')]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "HighCPU",
+              "criterionType": "StaticThresholdCriterion",
+              "metricName": "Percentage CPU",
+              "metricNamespace": "Microsoft.Compute/virtualMachineScaleSets",
+              "operator": "GreaterThan",
+              "threshold": 80,
+              "timeAggregation": "Average"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "alert-webapp-5xx",
+      "location": "global",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "description": "Fires when the docs-api Web App returns HTTP 5xx errors.",
+        "severity": 1,
+        "enabled": true,
+        "scopes": [
+          "[parameters('docsAppId')]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "Http5xx",
+              "criterionType": "StaticThresholdCriterion",
+              "metricName": "Http5xx",
+              "metricNamespace": "Microsoft.Web/sites",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "timeAggregation": "Total"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[parameters('actionGroupId')]"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/activityLogAlerts",
+      "apiVersion": "2020-10-01",
+      "name": "alert-spot-eviction",
+      "location": "global",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "description": "Fires when a Spot VM or VMSS instance is evicted.",
+        "enabled": true,
+        "scopes": [
+          "[resourceGroup().id]"
+        ],
+        "condition": {
+          "allOf": [
+            {
+              "field": "category",
+              "equals": "Policy"
+            },
+            {
+              "field": "operationName",
+              "equals": "Microsoft.Compute/virtualMachineScaleSets/deallocate/action"
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            {
+              "actionGroupId": "[parameters('actionGroupId')]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/activityLogAlerts",
+      "apiVersion": "2020-10-01",
+      "name": "alert-role-assignment-change",
+      "location": "global",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "description": "Fires when a role assignment is created or deleted in the resource group.",
+        "enabled": true,
+        "scopes": [
+          "[resourceGroup().id]"
+        ],
+        "condition": {
+          "allOf": [
+            {
+              "field": "category",
+              "equals": "Administrative"
+            },
+            {
+              "field": "operationName",
+              "containsAny": [
+                "Microsoft.Authorization/roleAssignments/write",
+                "Microsoft.Authorization/roleAssignments/delete"
+              ]
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            {
+              "actionGroupId": "[parameters('actionGroupId')]"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "cpuAlertId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/metricAlerts', 'alert-vmss-cpu-high')]"
+    },
+    "http5xxAlertId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/metricAlerts', 'alert-webapp-5xx')]"
+    },
+    "spotEvictionAlertId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/activityLogAlerts', 'alert-spot-eviction')]"
+    },
+    "roleChangeAlertId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/activityLogAlerts', 'alert-role-assignment-change')]"
+    }
+  }
+}

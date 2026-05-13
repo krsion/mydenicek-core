@@ -1,0 +1,823 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "3924588119763699721"
+    }
+  },
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "allowedValues": [
+        "dev",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Environment name (dev or prod)."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": {
+        "description": "Azure region."
+      }
+    },
+    "subnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the workload subnet for the VM NIC."
+      }
+    },
+    "lawResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics Workspace."
+      }
+    },
+    "appInsightsConnStr": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Insights connection string."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "variables": {
+    "tableStorageDeplName": "[format('saacl{0}{1}', parameters('environment'), uniqueString(resourceGroup().id))]",
+    "fileStorageDeplName": "[format('safiles{0}{1}', parameters('environment'), uniqueString(resourceGroup().id))]",
+    "vmDeplName": "[format('vm-acl-{0}', parameters('environment'))]",
+    "storageTableDataContributorRoleId": "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3",
+    "storageFileSmbContributorRoleId": "0c867c2a-1d8c-454a-a3db-ab2ea1bdc8bb"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, variables('tableStorageDeplName'), variables('vmDeplName'), variables('storageTableDataContributorRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageTableDataContributorRoleId'))]",
+        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('vm-acl-{0}', parameters('environment'))), '2025-04-01').outputs.principalId.value]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('vm-acl-{0}', parameters('environment')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, variables('fileStorageDeplName'), variables('vmDeplName'), variables('storageFileSmbContributorRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageFileSmbContributorRoleId'))]",
+        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('vm-acl-{0}', parameters('environment'))), '2025-04-01').outputs.principalId.value]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('vm-acl-{0}', parameters('environment')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('vm-acl-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('vm-acl-{0}', parameters('environment'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "subnetId": {
+            "value": "[parameters('subnetId')]"
+          },
+          "asgId": {
+            "value": "TODO_ASG_ID"
+          },
+          "adminUsername": {
+            "value": "azureuser"
+          },
+          "sshPublicKey": {
+            "value": "TODO_SSH_PUBLIC_KEY"
+          },
+          "storageAccountName": {
+            "value": "[format('saacl{0}{1}', parameters('environment'), uniqueString(resourceGroup().id))]"
+          },
+          "appInsightsConnStr": {
+            "value": "[parameters('appInsightsConnStr')]"
+          },
+          "authEnabled": {
+            "value": true
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "8370021767405836288"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the VM."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the subnet for the VM NIC."
+              }
+            },
+            "asgId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Application Security Group."
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "Admin username for the VM OS."
+              }
+            },
+            "sshPublicKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "SSH public key for the admin user."
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account name (used as reference in CustomScript)."
+              }
+            },
+            "appInsightsConnStr": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights connection string."
+              }
+            },
+            "authEnabled": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Whether to enable authentication in the app."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "priority": "Spot",
+                "evictionPolicy": "Deallocate",
+                "billingProfile": {
+                  "maxPrice": -1
+                },
+                "hardwareProfile": {
+                  "vmSize": "Standard_B1s"
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "Canonical",
+                    "offer": "0001-com-ubuntu-server-jammy",
+                    "sku": "22_04-lts-gen2",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "Standard_LRS"
+                    }
+                  },
+                  "dataDisks": [
+                    {
+                      "lun": 0,
+                      "createOption": "Empty",
+                      "diskSizeGB": 32,
+                      "managedDisk": {
+                        "storageAccountType": "StandardSSD_LRS"
+                      }
+                    }
+                  ]
+                },
+                "osProfile": {
+                  "computerName": "[parameters('name')]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "linuxConfiguration": {
+                    "disablePasswordAuthentication": true,
+                    "ssh": {
+                      "publicKeys": [
+                        {
+                          "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
+                          "keyData": "[parameters('sshPublicKey')]"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', parameters('name')))]",
+                      "properties": {
+                        "primary": true
+                      }
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-nic', parameters('name')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}-nic', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "subnet": {
+                        "id": "[parameters('subnetId')]"
+                      },
+                      "applicationSecurityGroups": [
+                        {
+                          "id": "[parameters('asgId')]"
+                        }
+                      ],
+                      "privateIPAllocationMethod": "Dynamic"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'AzureMonitorLinuxAgent')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "publisher": "Microsoft.Azure.Monitor",
+                "type": "AzureMonitorLinuxAgent",
+                "typeHandlerVersion": "1.0",
+                "autoUpgradeMinorVersion": true,
+                "enableAutomaticUpgrade": true,
+                "settings": {}
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'CustomScript')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.1",
+                "autoUpgradeMinorVersion": true,
+                "protectedSettings": {
+                  "commandToExecute": "[format('export STORAGE_ACCOUNT_NAME=\"{0}\" APPINSIGHTS_CONN_STR=\"{1}\" AUTH_ENABLED=\"{2}\" && bash -c ''set -e; DATA_DISK=$(readlink -f /dev/disk/azure/scsi1/lun0); blkid \"$DATA_DISK\" 2>/dev/null || mkfs.ext4 \"$DATA_DISK\"; mkdir -p /data; mount \"$DATA_DISK\" /data; grep -q \"$DATA_DISK\" /etc/fstab || echo \"$DATA_DISK /data ext4 defaults,nofail 0 2\" >> /etc/fstab''', parameters('storageAccountName'), parameters('appInsightsConnStr'), string(parameters('authEnabled')))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('name'), 'AzureMonitorLinuxAgent')]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vmId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Compute/virtualMachines', parameters('name'))]"
+            },
+            "vmName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Compute/virtualMachines', parameters('name')), '2024-03-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('storage-acl-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('saacl{0}{1}', parameters('environment'), uniqueString(resourceGroup().id))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "privateEndpointSubnetId": {
+            "value": "TODO_PE_SUBNET_ID"
+          },
+          "privateDnsZoneId": {
+            "value": "TODO_TABLE_DNS_ZONE_ID"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "7570477323348429688"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the storage account (must be globally unique, 3-24 lowercase alphanumeric)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "privateEndpointSubnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the private endpoint subnet."
+              }
+            },
+            "privateDnsZoneId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the privatelink.table.core.windows.net private DNS zone."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "properties": {
+                "accessTier": "Hot",
+                "allowSharedKeyAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true,
+                "publicNetworkAccess": "Disabled",
+                "networkAcls": {
+                  "bypass": "AzureServices",
+                  "defaultAction": "Deny"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/tableServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', 'acl')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/tableServices', parameters('name'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/tableServices/tables",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', 'peers')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/tableServices', parameters('name'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2023-11-01",
+              "name": "[format('pe-table-{0}', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('privateEndpointSubnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('plsc-table-{0}', parameters('name'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]",
+                      "groupIds": [
+                        "table"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', format('pe-table-{0}', parameters('name')), format('dzg-table-{0}', parameters('name')))]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "privatelink-table",
+                    "properties": {
+                      "privateDnsZoneId": "[parameters('privateDnsZoneId')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-table-{0}', parameters('name')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+            },
+            "storageAccountName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "tableEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('name')), '2023-05-01').primaryEndpoints.table]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('fileshare-acl-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('safiles{0}{1}', parameters('environment'), uniqueString(resourceGroup().id))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "shareName": {
+            "value": "shared"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "5182369163727600462"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the storage account (must be globally unique, 3-24 lowercase alphanumeric)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "shareName": {
+              "type": "string",
+              "defaultValue": "shared",
+              "metadata": {
+                "description": "Name of the Azure Files SMB share."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "properties": {
+                "accessTier": "Hot",
+                "allowSharedKeyAccess": true,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true,
+                "publicNetworkAccess": "Enabled",
+                "largeFileSharesState": "Enabled"
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', parameters('shareName'))]",
+              "properties": {
+                "shareQuota": 10,
+                "enabledProtocols": "SMB"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('name'), 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+            },
+            "storageAccountName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "fileShareName": {
+              "type": "string",
+              "value": "[parameters('shareName')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('backup-acl-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('rsv-acl-{0}', parameters('environment'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "vmId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('vm-acl-{0}', parameters('environment'))), '2025-04-01').outputs.vmId.value]"
+          },
+          "vmName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('vm-acl-{0}', parameters('environment'))), '2025-04-01').outputs.vmName.value]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "13850315146324189724"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Recovery Services Vault."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "vmId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the VM to protect."
+              }
+            },
+            "vmName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the VM (used in backup item name)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.RecoveryServices/vaults",
+              "apiVersion": "2024-04-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "RS0",
+                "tier": "Standard"
+              },
+              "properties": {
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            {
+              "type": "Microsoft.RecoveryServices/vaults/backupPolicies",
+              "apiVersion": "2024-04-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'policy-daily-7d')]",
+              "properties": {
+                "backupManagementType": "AzureIaasVM",
+                "instantRpRetentionRangeInDays": 2,
+                "schedulePolicy": {
+                  "schedulePolicyType": "SimpleSchedulePolicy",
+                  "scheduleRunFrequency": "Daily",
+                  "scheduleRunTimes": [
+                    "2024-01-01T02:00:00Z"
+                  ]
+                },
+                "retentionPolicy": {
+                  "retentionPolicyType": "LongTermRetentionPolicy",
+                  "dailySchedule": {
+                    "retentionTimes": [
+                      "2024-01-01T02:00:00Z"
+                    ],
+                    "retentionDuration": {
+                      "count": 7,
+                      "durationType": "Days"
+                    }
+                  }
+                },
+                "timeZone": "UTC"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.RecoveryServices/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems",
+              "apiVersion": "2024-04-01",
+              "name": "[format('{0}/Azure/iaasvmcontainerv2;{1};{2}/vm;iaasvmcontainerv2;{3};{4}', parameters('name'), resourceGroup().name, parameters('vmName'), resourceGroup().name, parameters('vmName'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "protectedItemType": "Microsoft.Compute/virtualMachines",
+                "policyId": "[resourceId('Microsoft.RecoveryServices/vaults/backupPolicies', parameters('name'), 'policy-daily-7d')]",
+                "sourceResourceId": "[parameters('vmId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.RecoveryServices/vaults/backupPolicies', parameters('name'), 'policy-daily-7d')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vaultId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.RecoveryServices/vaults', parameters('name'))]"
+            },
+            "vaultName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "backupPolicyId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.RecoveryServices/vaults/backupPolicies', parameters('name'), 'policy-daily-7d')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('vm-acl-{0}', parameters('environment')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "lawResourceId": {
+      "type": "string",
+      "value": "[parameters('lawResourceId')]"
+    },
+    "vmId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('vm-acl-{0}', parameters('environment'))), '2025-04-01').outputs.vmId.value]"
+    },
+    "tableStorageAccountId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-acl-{0}', parameters('environment'))), '2025-04-01').outputs.storageAccountId.value]"
+    },
+    "fileStorageAccountId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('fileshare-acl-{0}', parameters('environment'))), '2025-04-01').outputs.storageAccountId.value]"
+    }
+  }
+}

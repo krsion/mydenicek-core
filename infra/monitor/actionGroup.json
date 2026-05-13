@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "14539879808343775034"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the action group."
+      }
+    },
+    "emailAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Email address to send alert notifications to."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "global",
+      "metadata": {
+        "description": "Must be \"global\" for action groups."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/actionGroups",
+      "apiVersion": "2023-01-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "groupShortName": "[substring(replace(parameters('name'), '-', ''), 0, min(length(replace(parameters('name'), '-', '')), 12))]",
+        "enabled": true,
+        "emailReceivers": [
+          {
+            "name": "ops-email",
+            "emailAddress": "[parameters('emailAddress')]",
+            "useCommonAlertSchema": true
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "actionGroupId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/actionGroups', parameters('name'))]"
+    }
+  }
+}

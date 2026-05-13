@@ -1,0 +1,70 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "6194032688885614416"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Application Insights instance."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for Application Insights."
+      }
+    },
+    "workspaceResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics Workspace to link."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[parameters('workspaceResourceId')]",
+        "RetentionInDays": 30,
+        "IngestionMode": "LogAnalytics",
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      }
+    }
+  ],
+  "outputs": {
+    "appInsightsId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/components', parameters('name'))]"
+    },
+    "instrumentationKey": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').InstrumentationKey]"
+    },
+    "connectionString": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').ConnectionString]"
+    }
+  }
+}
