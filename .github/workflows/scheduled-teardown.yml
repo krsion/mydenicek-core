@@ -1,0 +1,71 @@
+name: Scheduled Teardown (22:00 CEST)
+
+on:
+  # 20:00 UTC = 22:00 CEST
+  schedule:
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  teardown:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Delete VMSS instances
+        run: |
+          echo "Deleting VMSS scale sets..."
+          az vmss list --query "[].{name:name,rg:resourceGroup}" -o tsv | \
+          while IFS=$'\t' read -r name rg; do
+            echo "Deleting VMSS: $name in $rg"
+            az vmss delete --name "$name" --resource-group "$rg" --yes --no-wait || true
+          done
+
+      - name: Delete ACL VMs
+        run: |
+          echo "Deleting VMs tagged as acl..."
+          az vm list --query "[?tags.service=='acl'].{name:name,rg:resourceGroup}" -o tsv | \
+          while IFS=$'\t' read -r name rg; do
+            echo "Deleting VM: $name in $rg"
+            az vm delete --name "$name" --resource-group "$rg" --yes --no-wait || true
+          done
+
+      - name: Delete App Service Plans
+        run: |
+          echo "Deleting App Service Plans..."
+          az appservice plan list --query "[].{name:name,rg:resourceGroup}" -o tsv | \
+          while IFS=$'\t' read -r name rg; do
+            echo "Deleting App Service Plan: $name in $rg"
+            az appservice plan delete --name "$name" --resource-group "$rg" --yes || true
+          done
+
+      - name: Delete ACI container groups
+        run: |
+          echo "Deleting ACI container groups..."
+          az container list --query "[].{name:name,rg:resourceGroup}" -o tsv | \
+          while IFS=$'\t' read -r name rg; do
+            echo "Deleting container group: $name in $rg"
+            az container delete --name "$name" --resource-group "$rg" --yes --no-wait || true
+          done
+
+      - name: Delete Load Balancers
+        run: |
+          echo "Deleting Load Balancers..."
+          az network lb list --query "[].{name:name,rg:resourceGroup}" -o tsv | \
+          while IFS=$'\t' read -r name rg; do
+            echo "Deleting LB: $name in $rg"
+            az network lb delete --name "$name" --resource-group "$rg" --no-wait || true
+          done
+
+      - name: Summary
+        run: |
+          echo "✅ Teardown complete."
+          echo "Preserved: Storage accounts, LAW, ACR, VNets, Key Vault."
