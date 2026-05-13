@@ -27,6 +27,12 @@ export interface SyncOptions {
   url: string;
   /** Room identifier to join. */
   roomId: string;
+  /** Stable auth-bound peer ID sent to sync server when auth is enabled. */
+  authPeerId?: string;
+  /** Optional event signer for outbound CRDT events. */
+  signUnsignedEvent?: SyncConnectionOptions["signUnsignedEvent"];
+  /** Optional auth device GUID sent with sync connection. */
+  authDeviceGuid?: string;
 }
 
 /** Options for {@link useDenicek}. */
@@ -137,7 +143,7 @@ export function useDenicek(options?: UseDenicekOptions): UseDenicekReturn {
 
   // Wrap a CRDT mutation: call it, recompute formulas, bump version, flush sync
   const mutate = useCallback(
-    <T,>(fn: () => T): T => {
+    <T>(fn: () => T): T => {
       const result = fn();
       try {
         dk.recomputeFormulas();

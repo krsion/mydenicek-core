@@ -1,0 +1,9 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env main.ts",
+    "check": "deno check main.ts"
+  },
+  "imports": {
+    "@mydenicek/shared-types": "../../packages/shared-types/mod.ts"
+  }
+}

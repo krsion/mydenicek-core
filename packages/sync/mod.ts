@@ -31,6 +31,18 @@ export type {
 export { SyncRoom } from "./room.ts";
 export { createSyncServer } from "./server.ts";
 export type { SyncServerHandle, SyncServerOptions } from "./server.ts";
+export { createAclClient } from "./src/acl-client.ts";
+export type { AclClient, AclClientOptions } from "./src/acl-client.ts";
+export {
+  computePeerId,
+  isAuthEnabled,
+  resolveConnectionIdentity,
+} from "./src/auth.ts";
+export type { ConnectionIdentity, ConnectionRole } from "./src/auth.ts";
+export {
+  mapSignedPayloadToEncodedEvents,
+  validateInboundSignedEvents,
+} from "./src/guard.ts";
 export {
   computeDocumentHash,
   computeDocumentHashSync,

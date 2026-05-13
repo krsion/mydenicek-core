@@ -1,0 +1,18 @@
+{
+  "name": "@mydenicek/crypto",
+  "version": "0.1.0",
+  "description": "Ed25519 signing helpers for CRDT sync envelopes.",
+  "license": "MIT",
+  "exports": "./mod.ts",
+  "tasks": {
+    "fmt": "deno fmt mod.ts tests deno.json",
+    "fmt:check": "deno fmt --check mod.ts tests deno.json",
+    "lint": "deno lint mod.ts tests",
+    "check": "deno check mod.ts tests/*.ts",
+    "test": "deno test tests"
+  },
+  "imports": {
+    "@mydenicek/shared-types": "../shared-types/mod.ts",
+    "@std/assert": "../../tools/deno_std/assert.ts"
+  }
+}

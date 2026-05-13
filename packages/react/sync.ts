@@ -7,6 +7,7 @@
  */
 
 import type { Denicek, PlainNode } from "@mydenicek/core";
+import type { SignedEvent, UnsignedEvent } from "@mydenicek/shared-types";
 import { SyncClient as BaseSyncClient } from "@mydenicek/sync";
 
 /** Reactive sync status. */
@@ -23,6 +24,12 @@ export interface SyncConnectionOptions {
   url: string;
   /** Room identifier to join. */
   roomId: string;
+  /** Stable auth-bound peer ID sent to the sync server when enabled. */
+  authPeerId?: string;
+  /** Optional event signer for L4 event signatures. */
+  signUnsignedEvent?: (event: UnsignedEvent) => Promise<SignedEvent>;
+  /** Optional auth device GUID sent during WebSocket upgrade. */
+  authDeviceGuid?: string;
 }
 
 /**
@@ -61,6 +68,9 @@ export class SyncClient {
       document: this.denicek,
       initialDocument: this.initialDocumentSnapshot,
       onRemoteChange: () => this.onRemoteChange(),
+      authPeerId: opts.authPeerId,
+      signUnsignedEvent: opts.signUnsignedEvent,
+      authDeviceGuid: opts.authDeviceGuid,
       onDisconnect: () => {
         if (this.inner !== inner || !this.opts) return;
         this.inner = null;

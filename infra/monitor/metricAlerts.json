@@ -1,0 +1,61 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "15645896798040294281"
+    }
+  },
+  "parameters": {
+    "aclStorageResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of sa-acl storage account."
+      }
+    },
+    "actionGroupResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Action group resource ID."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/activityLogAlerts",
+      "apiVersion": "2020-10-01",
+      "name": "sa-acl-role-assignment-changes",
+      "location": "global",
+      "properties": {
+        "enabled": true,
+        "scopes": [
+          "[parameters('aclStorageResourceId')]"
+        ],
+        "condition": {
+          "allOf": [
+            {
+              "field": "category",
+              "equals": "Administrative"
+            },
+            {
+              "field": "operationName",
+              "containsAny": [
+                "Microsoft.Authorization/roleAssignments/write",
+                "Microsoft.Authorization/roleAssignments/delete"
+              ]
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            {
+              "actionGroupId": "[parameters('actionGroupResourceId')]"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
