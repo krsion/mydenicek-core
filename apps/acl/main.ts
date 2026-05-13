@@ -64,6 +64,18 @@ function requireClaims(request: FastifyRequest): EntraClaims {
 }
 
 // ---------------------------------------------------------------------------
+// OData helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Escapes a value for safe interpolation into an Azure Table Storage OData
+ * filter string by doubling any embedded single quotes.
+ */
+function escapeOdata(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+// ---------------------------------------------------------------------------
 // Server setup
 // ---------------------------------------------------------------------------
 
@@ -193,7 +205,7 @@ function buildServer(): FastifyInstance {
       const entities = peersTable.listEntities<
         PeerKey & { partitionKey: string; rowKey: string }
       >({
-        queryOptions: { filter: `partitionKey eq '${oid}'` },
+        queryOptions: { filter: `partitionKey eq '${escapeOdata(oid)}'` },
       });
       const keys: PeerKey[] = [];
       for await (const e of entities) {
@@ -221,7 +233,7 @@ function buildServer(): FastifyInstance {
       const entities = peersTable.listEntities<
         PeerKey & { partitionKey: string; rowKey: string }
       >({
-        queryOptions: { filter: `peerId eq '${peerId}'` },
+        queryOptions: { filter: `peerId eq '${escapeOdata(peerId)}'` },
       });
       for await (const e of entities) {
         if (!e.revokedAt) return entityToPeerKey(e);

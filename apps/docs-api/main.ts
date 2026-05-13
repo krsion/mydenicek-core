@@ -59,6 +59,18 @@ function requireClaims(request: FastifyRequest): EntraClaims {
 }
 
 // ---------------------------------------------------------------------------
+// OData helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Escapes a value for safe interpolation into an Azure Table Storage OData
+ * filter string by doubling any embedded single quotes.
+ */
+function escapeOdata(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+// ---------------------------------------------------------------------------
 // Server setup
 // ---------------------------------------------------------------------------
 
@@ -75,7 +87,7 @@ function buildServer(): FastifyInstance {
   app.get("/docs", async (request) => {
     const { oid } = requireClaims(request);
     const entities = table.listEntities<Doc & { partitionKey: string; rowKey: string }>({
-      queryOptions: { filter: `partitionKey eq '${oid}'` },
+      queryOptions: { filter: `partitionKey eq '${escapeOdata(oid)}'` },
     });
     const docs: Doc[] = [];
     for await (const entity of entities) {

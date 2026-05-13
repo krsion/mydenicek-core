@@ -5,18 +5,10 @@ import type {
   UnsignedEvent,
 } from "@mydenicek/shared-types";
 
-// noble/ed25519 v2 requires a SHA-512 implementation in non-browser runtimes.
-// Deno exposes crypto.subtle, so we wire it up here.
-ed.etc.sha512Sync = (...msgs: Uint8Array[]): Uint8Array => {
-  // noble calls this synchronously; we use the sync path via SubtleCrypto.
-  // In practice noble also accepts an async shim via sha512Async, but the
-  // sign/verify APIs we use are already async, so this path is never hit.
-  // Keep it as a safety net.
-  throw new Error(
-    "Synchronous SHA-512 is not available in Deno — use async APIs only.",
-  );
-};
-
+// noble/ed25519 v2 requires SHA-512 to be injected in non-browser runtimes.
+// We provide only the async shim because all public API calls (sign, verify,
+// getPublicKey) are async.  noble v2 guarantees sha512Sync is never called
+// when sha512Async is set and only async entry points are used.
 ed.etc.sha512Async = async (...msgs: Uint8Array[]): Promise<Uint8Array> => {
   const combined = concatBytes(...msgs);
   const hash = await crypto.subtle.digest("SHA-512", combined);
@@ -130,10 +122,23 @@ export async function verifyEvent(
  * Recursively sorts object keys so the JSON serialisation is deterministic
  * regardless of insertion order.  Arrays are preserved as-is (elements are
  * not reordered).
+ *
+ * Only plain JSON-serializable values are supported.  Passing non-plain
+ * objects (Date, Map, Set, class instances, etc.) in event payloads will
+ * produce inconsistent hashes and is not supported.
  */
 function sortedJson(value: unknown): unknown {
   if (value === null || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(sortedJson);
+  // Guard: only process plain objects (prototype is Object or null).
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) {
+    throw new TypeError(
+      `Event payload must contain only plain JSON-serializable values; got ${
+        (value as object).constructor?.name ?? "unknown"
+      }`,
+    );
+  }
   const sorted: Record<string, unknown> = {};
   for (const key of Object.keys(value as object).sort()) {
     sorted[key] = sortedJson((value as Record<string, unknown>)[key]);
