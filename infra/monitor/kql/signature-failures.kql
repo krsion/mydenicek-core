@@ -1,0 +1,6 @@
+// CRDT event signature verification failures
+AppTraces
+| where Message contains "signature-failure"
+| extend docId = tostring(Properties["docId"]), peerId = tostring(Properties["peerId"]), reason = tostring(Properties["reason"])
+| summarize Failures = count() by docId, peerId, reason, bin(TimeGenerated, 5m)
+| order by Failures desc

@@ -1,0 +1,5 @@
+// NSG denied flows
+AzureNetworkAnalytics_CL
+| where SubType_s == "FlowLog" and FlowType_s == "MaliciousFlow"
+| summarize Denies = count() by SrcIP_s, DestPort_d, bin(TimeGenerated, 15m)
+| order by Denies desc

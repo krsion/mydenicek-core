@@ -1,0 +1,6 @@
+// Vector clock gaps in sync events
+AppTraces
+| where Message contains "vector-clock-gap"
+| extend docId = tostring(Properties["docId"]), peerId = tostring(Properties["peerId"])
+| summarize GapCount = count() by docId, peerId, bin(TimeGenerated, 1h)
+| order by GapCount desc

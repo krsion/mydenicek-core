@@ -1,0 +1,5 @@
+// Slow API requests (>500ms)
+AppRequests
+| where DurationMs > 500
+| summarize P99 = percentile(DurationMs, 99), Count = count() by Name, bin(TimeGenerated, 5m)
+| order by P99 desc
