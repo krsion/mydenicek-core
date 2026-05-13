@@ -1,0 +1,40 @@
+name: Scheduled Spin-up (07:00 CEST)
+
+on:
+  # 05:00 UTC = 07:00 CEST
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  actions: write
+
+jobs:
+  spinup:
+    runs-on: ubuntu-latest
+    strategy:
+      # Deploy services sequentially to avoid ACR contention
+      max-parallel: 1
+      matrix:
+        service: [sync, docs-api, acl, attachments]
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Redeploy ${{ matrix.service }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run deploy-service.yml \
+            --repo "${{ github.repository }}" \
+            --field service="${{ matrix.service }}" \
+            --field environment=dev \
+            --field image_tag=latest
+
+      - name: Summary
+        run: echo "✅ Spin-up triggered for ${{ matrix.service }}"

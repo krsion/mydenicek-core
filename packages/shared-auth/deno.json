@@ -1,0 +1,16 @@
+{
+  "name": "@mydenicek/shared-auth",
+  "version": "0.1.0",
+  "description": "Entra JWT verification for mydenicek.",
+  "license": "MIT",
+  "exports": "./mod.ts",
+  "tasks": {
+    "fmt": "deno fmt .",
+    "fmt:check": "deno fmt --check .",
+    "lint": "deno lint .",
+    "check": "deno check mod.ts"
+  },
+  "imports": {
+    "jose": "npm:jose@^5.9.6"
+  }
+}

@@ -4,8 +4,14 @@
     "./packages/core",
     "./packages/react",
     "./packages/sync",
+    "./packages/shared-types",
+    "./packages/shared-auth",
+    "./packages/crypto",
     "./apps/sync-server",
-    "./apps/mywebnicek"
+    "./apps/mywebnicek",
+    "./apps/docs-api",
+    "./apps/acl",
+    "./apps/attachments"
   ],
   "tasks": {
     "fmt": "deno fmt deno.json README.md && cd packages/core && deno task fmt && cd ../sync && deno task fmt && cd ../../apps/sync-server && deno task fmt && cd ../mywebnicek && deno task fmt",

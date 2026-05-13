@@ -1,0 +1,683 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "17754664188661535981"
+    }
+  },
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "allowedValues": [
+        "dev",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Environment name (dev or prod)."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": {
+        "description": "Azure region."
+      }
+    },
+    "subnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the workload subnet for the VMSS NICs."
+      }
+    },
+    "acrName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Azure Container Registry (without login server suffix)."
+      }
+    },
+    "lawResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics Workspace."
+      }
+    },
+    "appInsightsConnStr": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Insights connection string."
+      }
+    },
+    "aclStorageAccountId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the ACL service storage account (for table data reader assignment)."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "variables": {
+    "syncStorageName": "[format('sasync{0}{1}', parameters('environment'), uniqueString(resourceGroup().id))]",
+    "vmssDeplName": "[format('vmss-sync-{0}', parameters('environment'))]",
+    "storageBlobDataContributorRoleId": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
+    "acrPullRoleId": "7f951dda-4ed3-4680-a7ca-43fe172d538d",
+    "monitoringMetricsPublisherRoleId": "3913510d-42f4-4e42-8a64-420c390055eb",
+    "storageTableDataReaderRoleId": "76199698-9eea-4c19-bc75-cec21354c6b6"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, variables('syncStorageName'), variables('vmssDeplName'), variables('storageBlobDataContributorRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleId'))]",
+        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('vmss-sync-{0}', parameters('environment'))), '2025-04-01').outputs.principalId.value]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('vmss-sync-{0}', parameters('environment')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
+      "name": "[guid(resourceGroup().id, parameters('acrName'), variables('vmssDeplName'), variables('acrPullRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('acrPullRoleId'))]",
+        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('vmss-sync-{0}', parameters('environment'))), '2025-04-01').outputs.principalId.value]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('vmss-sync-{0}', parameters('environment')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, variables('vmssDeplName'), variables('monitoringMetricsPublisherRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('monitoringMetricsPublisherRoleId'))]",
+        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('vmss-sync-{0}', parameters('environment'))), '2025-04-01').outputs.principalId.value]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('vmss-sync-{0}', parameters('environment')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', last(split(parameters('aclStorageAccountId'), '/')))]",
+      "name": "[guid(resourceGroup().id, parameters('aclStorageAccountId'), variables('vmssDeplName'), variables('storageTableDataReaderRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageTableDataReaderRoleId'))]",
+        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', format('vmss-sync-{0}', parameters('environment'))), '2025-04-01').outputs.principalId.value]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('vmss-sync-{0}', parameters('environment')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('vmss-sync-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('vmss-sync-{0}', parameters('environment'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "subnetId": {
+            "value": "[parameters('subnetId')]"
+          },
+          "acrLoginServer": {
+            "value": "[format('{0}.azurecr.io', parameters('acrName'))]"
+          },
+          "imageTag": {
+            "value": "latest"
+          },
+          "appInsightsConnStr": {
+            "value": "[parameters('appInsightsConnStr')]"
+          },
+          "authEnabled": {
+            "value": true
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "8495283627886654409"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the VMSS."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the subnet for VMSS NICs."
+              }
+            },
+            "acrLoginServer": {
+              "type": "string",
+              "metadata": {
+                "description": "Login server of the ACR (e.g. crmydenicek.azurecr.io)."
+              }
+            },
+            "imageTag": {
+              "type": "string",
+              "defaultValue": "latest",
+              "metadata": {
+                "description": "Docker image tag to deploy."
+              }
+            },
+            "appInsightsConnStr": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights connection string injected as env var."
+              }
+            },
+            "authEnabled": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Whether to enable authentication in the app."
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "defaultValue": "azureuser",
+              "metadata": {
+                "description": "Admin username for the OS. Must not be a reserved name."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Compute/virtualMachineScaleSets",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "sku": {
+                "name": "Standard_B1s",
+                "tier": "Standard",
+                "capacity": 1
+              },
+              "properties": {
+                "overprovision": false,
+                "upgradePolicy": {
+                  "mode": "Rolling",
+                  "rollingUpgradePolicy": {
+                    "maxBatchInstancePercent": 20,
+                    "maxUnhealthyInstancePercent": 20,
+                    "maxUnhealthyUpgradedInstancePercent": 20,
+                    "pauseTimeBetweenBatches": "PT0S"
+                  }
+                },
+                "virtualMachineProfile": {
+                  "priority": "Spot",
+                  "evictionPolicy": "Deallocate",
+                  "billingProfile": {
+                    "maxPrice": -1
+                  },
+                  "storageProfile": {
+                    "imageReference": {
+                      "publisher": "Canonical",
+                      "offer": "0001-com-ubuntu-server-jammy",
+                      "sku": "22_04-lts-gen2",
+                      "version": "latest"
+                    },
+                    "osDisk": {
+                      "createOption": "FromImage",
+                      "managedDisk": {
+                        "storageAccountType": "Standard_LRS"
+                      },
+                      "diskSizeGB": 30
+                    }
+                  },
+                  "osProfile": {
+                    "computerNamePrefix": "sync",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "linuxConfiguration": {
+                      "disablePasswordAuthentication": true,
+                      "ssh": {
+                        "publicKeys": [
+                          {
+                            "path": "/home/azureuser/.ssh/authorized_keys",
+                            "keyData": "TODO_SSH_PUBLIC_KEY"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "networkProfile": {
+                    "networkInterfaceConfigurations": [
+                      {
+                        "name": "[format('{0}-nic', parameters('name'))]",
+                        "properties": {
+                          "primary": true,
+                          "ipConfigurations": [
+                            {
+                              "name": "[format('{0}-ipconfig', parameters('name'))]",
+                              "properties": {
+                                "subnet": {
+                                  "id": "[parameters('subnetId')]"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "extensionProfile": {
+                    "extensions": [
+                      {
+                        "name": "CustomScript",
+                        "properties": {
+                          "publisher": "Microsoft.Azure.Extensions",
+                          "type": "CustomScript",
+                          "typeHandlerVersion": "2.1",
+                          "autoUpgradeMinorVersion": true,
+                          "settings": {},
+                          "protectedSettings": {
+                            "commandToExecute": "[format('export ACR_NAME=\"{0}\" ACR_LOGIN_SERVER=\"{1}\" IMAGE_TAG=\"{2}\" APPINSIGHTS_CONN_STR=\"{3}\" AUTH_ENABLED=\"{4}\" && az login --identity && az acr login --name \"$ACR_NAME\" && docker pull \"{5}/sync:{6}\" && docker run -d --restart=unless-stopped -e APPLICATIONINSIGHTS_CONNECTION_STRING=\"$APPINSIGHTS_CONN_STR\" -e AUTH_ENABLED=\"$AUTH_ENABLED\" -p 8080:8080 \"{7}/sync:{8}\"', replace(parameters('acrLoginServer'), '.azurecr.io', ''), parameters('acrLoginServer'), parameters('imageTag'), parameters('appInsightsConnStr'), string(parameters('authEnabled')), parameters('acrLoginServer'), parameters('imageTag'), parameters('acrLoginServer'), parameters('imageTag'))]"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "vmssId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('name'))]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('name')), '2024-03-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('storage-sync-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('sasync{0}{1}', parameters('environment'), uniqueString(resourceGroup().id))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "privateEndpointSubnetId": {
+            "value": "TODO_PE_SUBNET_ID"
+          },
+          "privateDnsZoneId": {
+            "value": "TODO_BLOB_DNS_ZONE_ID"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "15028871167636475178"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the storage account (must be globally unique, 3-24 lowercase alphanumeric)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "privateEndpointSubnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the private endpoint subnet."
+              }
+            },
+            "privateDnsZoneId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the privatelink.blob.core.windows.net private DNS zone."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "properties": {
+                "accessTier": "Hot",
+                "allowSharedKeyAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true,
+                "publicNetworkAccess": "Disabled",
+                "networkAcls": {
+                  "bypass": "AzureServices",
+                  "defaultAction": "Deny"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', 'events')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('name'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', 'snapshots')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('name'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2023-11-01",
+              "name": "[format('pe-blob-{0}', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('privateEndpointSubnetId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[format('plsc-blob-{0}', parameters('name'))]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]",
+                      "groupIds": [
+                        "blob"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', format('pe-blob-{0}', parameters('name')), format('dzg-blob-{0}', parameters('name')))]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "privatelink-blob",
+                    "properties": {
+                      "privateDnsZoneId": "[parameters('privateDnsZoneId')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-blob-{0}', parameters('name')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "storageAccountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+            },
+            "storageAccountName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "blobEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('name')), '2023-05-01').primaryEndpoints.blob]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('autoscale-sync-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('as-sync-{0}', parameters('environment'))]"
+          },
+          "vmssId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('vmss-sync-{0}', parameters('environment'))), '2025-04-01').outputs.vmssId.value]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "11885551003631947126"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the autoscale settings resource."
+              }
+            },
+            "vmssId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the VMSS to autoscale."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/autoscalesettings",
+              "apiVersion": "2022-10-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "enabled": true,
+                "targetResourceUri": "[parameters('vmssId')]",
+                "profiles": [
+                  {
+                    "name": "Default",
+                    "capacity": {
+                      "minimum": "1",
+                      "maximum": "5",
+                      "default": "1"
+                    },
+                    "rules": [
+                      {
+                        "metricTrigger": {
+                          "metricName": "Percentage CPU",
+                          "metricResourceUri": "[parameters('vmssId')]",
+                          "timeGrain": "PT1M",
+                          "statistic": "Average",
+                          "timeWindow": "PT5M",
+                          "timeAggregation": "Average",
+                          "operator": "GreaterThan",
+                          "threshold": 70
+                        },
+                        "scaleAction": {
+                          "direction": "Increase",
+                          "type": "ChangeCount",
+                          "value": "1",
+                          "cooldown": "PT5M"
+                        }
+                      },
+                      {
+                        "metricTrigger": {
+                          "metricName": "Percentage CPU",
+                          "metricResourceUri": "[parameters('vmssId')]",
+                          "timeGrain": "PT1M",
+                          "statistic": "Average",
+                          "timeWindow": "PT10M",
+                          "timeAggregation": "Average",
+                          "operator": "LessThan",
+                          "threshold": 30
+                        },
+                        "scaleAction": {
+                          "direction": "Decrease",
+                          "type": "ChangeCount",
+                          "value": "1",
+                          "cooldown": "PT10M"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "autoscaleId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/autoscalesettings', parameters('name'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('vmss-sync-{0}', parameters('environment')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "lawResourceId": {
+      "type": "string",
+      "value": "[parameters('lawResourceId')]"
+    },
+    "vmssId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('vmss-sync-{0}', parameters('environment'))), '2025-04-01').outputs.vmssId.value]"
+    },
+    "storageAccountId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('storage-sync-{0}', parameters('environment'))), '2025-04-01').outputs.storageAccountId.value]"
+    }
+  }
+}

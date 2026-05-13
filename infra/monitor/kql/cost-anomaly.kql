@@ -1,0 +1,5 @@
+// Cost anomaly detection
+AzureDiagnostics
+| where Category == "BillingAlert"
+| summarize TotalCost = sum(todouble(Amount_d)) by bin(TimeGenerated, 1d), ResourceGroup
+| order by TotalCost desc

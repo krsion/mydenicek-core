@@ -1,0 +1,644 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "15108144449339311812"
+    }
+  },
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "allowedValues": [
+        "dev",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Environment name (dev or prod)."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": {
+        "description": "Azure region."
+      }
+    },
+    "lawId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics Workspace."
+      }
+    },
+    "appInsightsId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Application Insights instance."
+      }
+    },
+    "syncVmssId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the sync VMSS."
+      }
+    },
+    "docsAppId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the docs-api Web App."
+      }
+    },
+    "aclVmId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the ACL VM."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('ag-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('ag-mydenicek-{0}', parameters('environment'))]"
+          },
+          "emailAddress": {
+            "value": "ops@example.com"
+          },
+          "location": {
+            "value": "global"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "14539879808343775034"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the action group."
+              }
+            },
+            "emailAddress": {
+              "type": "string",
+              "metadata": {
+                "description": "Email address to send alert notifications to."
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "global",
+              "metadata": {
+                "description": "Must be \"global\" for action groups."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/actionGroups",
+              "apiVersion": "2023-01-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "groupShortName": "[substring(replace(parameters('name'), '-', ''), 0, min(length(replace(parameters('name'), '-', '')), 12))]",
+                "enabled": true,
+                "emailReceivers": [
+                  {
+                    "name": "ops-email",
+                    "emailAddress": "[parameters('emailAddress')]",
+                    "useCommonAlertSchema": true
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "actionGroupId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/actionGroups', parameters('name'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('diag-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "lawId": {
+            "value": "[parameters('lawId')]"
+          },
+          "resourceIds": {
+            "value": [
+              "[parameters('syncVmssId')]",
+              "[parameters('docsAppId')]",
+              "[parameters('aclVmId')]"
+            ]
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "12203050849937563181"
+            }
+          },
+          "parameters": {
+            "lawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Log Analytics Workspace to send diagnostics to."
+              }
+            },
+            "resourceIds": {
+              "type": "array",
+              "metadata": {
+                "description": "List of resource IDs to create diagnostic settings for."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "diagnosticSettings",
+                "count": "[length(parameters('resourceIds'))]"
+              },
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "name": "[format('diag-to-law-{0}', copyIndex())]",
+              "properties": {
+                "workspaceId": "[parameters('lawId')]",
+                "logs": [
+                  {
+                    "categoryGroup": "allLogs",
+                    "enabled": true,
+                    "retentionPolicy": {
+                      "enabled": false,
+                      "days": 0
+                    }
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true,
+                    "retentionPolicy": {
+                      "enabled": false,
+                      "days": 0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('metricAlerts-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "global"
+          },
+          "actionGroupId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('ag-{0}', parameters('environment'))), '2025-04-01').outputs.actionGroupId.value]"
+          },
+          "syncVmssId": {
+            "value": "[parameters('syncVmssId')]"
+          },
+          "docsAppId": {
+            "value": "[parameters('docsAppId')]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "13625559526881898447"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "defaultValue": "global",
+              "metadata": {
+                "description": "Location for alert rules (use \"global\" for activity log alerts)."
+              }
+            },
+            "actionGroupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Action Group to trigger."
+              }
+            },
+            "syncVmssId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the sync VMSS."
+              }
+            },
+            "docsAppId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the docs-api Web App."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "alert-vmss-cpu-high",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Fires when sync VMSS average CPU exceeds 80% for 5 minutes.",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('syncVmssId')]"
+                ],
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "HighCPU",
+                      "criterionType": "StaticThresholdCriterion",
+                      "metricName": "Percentage CPU",
+                      "metricNamespace": "Microsoft.Compute/virtualMachineScaleSets",
+                      "operator": "GreaterThan",
+                      "threshold": 80,
+                      "timeAggregation": "Average"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "alert-webapp-5xx",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Fires when the docs-api Web App returns HTTP 5xx errors.",
+                "severity": 1,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('docsAppId')]"
+                ],
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "Http5xx",
+                      "criterionType": "StaticThresholdCriterion",
+                      "metricName": "Http5xx",
+                      "metricNamespace": "Microsoft.Web/sites",
+                      "operator": "GreaterThan",
+                      "threshold": 0,
+                      "timeAggregation": "Total"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/activityLogAlerts",
+              "apiVersion": "2020-10-01",
+              "name": "alert-spot-eviction",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Fires when a Spot VM or VMSS instance is evicted.",
+                "enabled": true,
+                "scopes": [
+                  "[resourceGroup().id]"
+                ],
+                "condition": {
+                  "allOf": [
+                    {
+                      "field": "category",
+                      "equals": "Policy"
+                    },
+                    {
+                      "field": "operationName",
+                      "equals": "Microsoft.Compute/virtualMachineScaleSets/deallocate/action"
+                    }
+                  ]
+                },
+                "actions": {
+                  "actionGroups": [
+                    {
+                      "actionGroupId": "[parameters('actionGroupId')]"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/activityLogAlerts",
+              "apiVersion": "2020-10-01",
+              "name": "alert-role-assignment-change",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Fires when a role assignment is created or deleted in the resource group.",
+                "enabled": true,
+                "scopes": [
+                  "[resourceGroup().id]"
+                ],
+                "condition": {
+                  "allOf": [
+                    {
+                      "field": "category",
+                      "equals": "Administrative"
+                    },
+                    {
+                      "field": "operationName",
+                      "containsAny": [
+                        "Microsoft.Authorization/roleAssignments/write",
+                        "Microsoft.Authorization/roleAssignments/delete"
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "actionGroups": [
+                    {
+                      "actionGroupId": "[parameters('actionGroupId')]"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "cpuAlertId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/metricAlerts', 'alert-vmss-cpu-high')]"
+            },
+            "http5xxAlertId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/metricAlerts', 'alert-webapp-5xx')]"
+            },
+            "spotEvictionAlertId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/activityLogAlerts', 'alert-spot-eviction')]"
+            },
+            "roleChangeAlertId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/activityLogAlerts', 'alert-role-assignment-change')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('ag-{0}', parameters('environment')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('logAlerts-{0}', parameters('environment'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "lawId": {
+            "value": "[parameters('lawId')]"
+          },
+          "actionGroupId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', format('ag-{0}', parameters('environment'))), '2025-04-01').outputs.actionGroupId.value]"
+          },
+          "tags": {
+            "value": "[parameters('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.42.1.51946",
+              "templateHash": "2318323042940282502"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for the scheduled query rules."
+              }
+            },
+            "lawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Log Analytics Workspace to query."
+              }
+            },
+            "actionGroupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Action Group to trigger."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/scheduledQueryRules",
+              "apiVersion": "2023-03-15-preview",
+              "name": "alert-signature-failures",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Fires when CRDT event signature verification failures exceed threshold.",
+                "enabled": true,
+                "severity": 1,
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT5M",
+                "scopes": [
+                  "[parameters('lawId')]"
+                ],
+                "criteria": {
+                  "allOf": [
+                    {
+                      "query": "AppTraces\n| where Message contains \"signature-failure\"\n| extend docId = tostring(Properties[\"docId\"]), peerId = tostring(Properties[\"peerId\"]), reason = tostring(Properties[\"reason\"])\n| summarize Failures = count() by docId, peerId, reason, bin(TimeGenerated, 5m)\n| where Failures > 0\n",
+                      "timeAggregation": "Count",
+                      "operator": "GreaterThan",
+                      "threshold": 0,
+                      "failingPeriods": {
+                        "numberOfEvaluationPeriods": 1,
+                        "minFailingPeriodsToAlert": 1
+                      }
+                    }
+                  ]
+                },
+                "actions": {
+                  "actionGroups": [
+                    "[parameters('actionGroupId')]"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/scheduledQueryRules",
+              "apiVersion": "2023-03-15-preview",
+              "name": "alert-failed-signins",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Fires when a single user exceeds 5 failed sign-ins in 5 minutes.",
+                "enabled": true,
+                "severity": 2,
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT5M",
+                "scopes": [
+                  "[parameters('lawId')]"
+                ],
+                "criteria": {
+                  "allOf": [
+                    {
+                      "query": "SigninLogs\n| where ResultType != 0\n| where AppDisplayName == \"mydenicek\"\n| summarize FailedAttempts = count() by UserPrincipalName, bin(TimeGenerated, 5m)\n| where FailedAttempts > 5\n",
+                      "timeAggregation": "Count",
+                      "operator": "GreaterThan",
+                      "threshold": 0,
+                      "failingPeriods": {
+                        "numberOfEvaluationPeriods": 1,
+                        "minFailingPeriodsToAlert": 1
+                      }
+                    }
+                  ]
+                },
+                "actions": {
+                  "actionGroups": [
+                    "[parameters('actionGroupId')]"
+                  ]
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "signatureFailuresAlertId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/scheduledQueryRules', 'alert-signature-failures')]"
+            },
+            "failedSignInsAlertId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/scheduledQueryRules', 'alert-failed-signins')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', format('ag-{0}', parameters('environment')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "actionGroupId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', format('ag-{0}', parameters('environment'))), '2025-04-01').outputs.actionGroupId.value]"
+    }
+  }
+}

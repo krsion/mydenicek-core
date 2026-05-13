@@ -1,0 +1,7 @@
+// Failed sign-ins to mydenicek
+SigninLogs
+| where ResultType != 0
+| where AppDisplayName == "mydenicek"
+| summarize FailedAttempts = count() by UserPrincipalName, bin(TimeGenerated, 5m)
+| where FailedAttempts > 5
+| order by TimeGenerated desc

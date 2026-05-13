@@ -1,0 +1,19 @@
+{
+  "name": "@mydenicek/acl",
+  "version": "0.1.0",
+  "exports": "./main.ts",
+  "tasks": {
+    "fmt": "deno fmt .",
+    "fmt:check": "deno fmt --check .",
+    "lint": "deno lint .",
+    "check": "deno check main.ts",
+    "start": "deno run --allow-net --allow-env main.ts"
+  },
+  "imports": {
+    "fastify": "npm:fastify@^4.28.1",
+    "@azure/data-tables": "npm:@azure/data-tables@^13.3.0",
+    "@azure/identity": "npm:@azure/identity@^4.4.1",
+    "@mydenicek/shared-auth": "../../packages/shared-auth/mod.ts",
+    "@mydenicek/shared-types": "../../packages/shared-types/mod.ts"
+  }
+}

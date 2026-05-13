@@ -1,0 +1,67 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "4643693720295903887"
+    }
+  },
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "allowedValues": [
+        "dev",
+        "prod"
+      ],
+      "metadata": {
+        "description": "Environment name (dev or prod)."
+      }
+    }
+  },
+  "variables": {
+    "roleDefName": "[guid(subscription().id, 'MydenicekOperator', parameters('environment'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/roleDefinitions",
+      "apiVersion": "2022-04-01",
+      "name": "[variables('roleDefName')]",
+      "properties": {
+        "roleName": "[format('Mydenicek Operator ({0})', parameters('environment'))]",
+        "description": "Can restart compute resources and read everything, but cannot delete resources.",
+        "type": "CustomRole",
+        "assignableScopes": [
+          "[subscription().id]"
+        ],
+        "permissions": [
+          {
+            "actions": [
+              "*/read",
+              "Microsoft.Compute/virtualMachines/restart/action",
+              "Microsoft.Compute/virtualMachineScaleSets/restart/action",
+              "Microsoft.Web/sites/restart/action",
+              "Microsoft.ContainerInstance/containerGroups/restart/action"
+            ],
+            "notActions": [
+              "*/delete"
+            ],
+            "dataActions": [],
+            "notDataActions": []
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "roleDefinitionId": {
+      "type": "string",
+      "value": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefName'))]"
+    },
+    "roleDefinitionName": {
+      "type": "string",
+      "value": "[variables('roleDefName')]"
+    }
+  }
+}

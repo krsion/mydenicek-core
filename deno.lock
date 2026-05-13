@@ -2,8 +2,8 @@
   "version": "5",
   "specifiers": {
     "jsr:@std/data-structures@1": "1.0.10",
+    "jsr:@std/random@*": "0.1.5",
     "npm:@deno/vite-plugin@1": "1.0.6_vite@6.4.1",
-    "npm:@playwright/test@^1.59.1": "1.59.1",
     "npm:@vitejs/plugin-react@^5.1.0": "5.2.0_vite@6.4.1",
     "npm:fast-check@^4.5.3": "4.5.3",
     "npm:playwright@*": "1.59.1",
@@ -16,6 +16,9 @@
   "jsr": {
     "@std/data-structures@1.0.10": {
       "integrity": "f574f86b0e07c69b9edc555fcc814b57d29258bad39fd5a34ba8a80ecf033cfe"
+    },
+    "@std/random@0.1.5": {
+      "integrity": "d26614c4f6c441afc22397a1c5b8f27d02ab8f5572f1d29e7b0cd57f3d548235"
     }
   },
   "npm": {
@@ -318,13 +321,6 @@
         "@jridgewell/resolve-uri",
         "@jridgewell/sourcemap-codec"
       ]
-    },
-    "@playwright/test@1.59.1": {
-      "integrity": "sha512-PG6q63nQg5c9rIi4/Z5lR5IVF7yU5MqmKaPOe0HSc0O2cX1fPi96sUQu5j7eo4gKCkB2AnNGoWt7y4/Xx3Kcqg==",
-      "dependencies": [
-        "playwright"
-      ],
-      "bin": true
     },
     "@rolldown/pluginutils@1.0.0-rc.3": {
       "integrity": "sha512-eybk3TjzzzV97Dlj5c+XrBFW57eTNhzod66y9HrBlzJ6NsCrWCp/2kaPS3K9wJmurBC0Tdw4yPjXKZqlznim3Q=="
@@ -745,20 +741,38 @@
   },
   "workspace": {
     "members": {
+      "apps/acl": {
+        "dependencies": [
+          "npm:@azure/data-tables@^13.3.0",
+          "npm:@azure/identity@^4.4.1",
+          "npm:fastify@^4.28.1"
+        ]
+      },
+      "apps/attachments": {
+        "dependencies": [
+          "npm:@azure/identity@^4.4.1",
+          "npm:@azure/storage-blob@^12.25.0",
+          "npm:fastify@^4.28.1"
+        ]
+      },
+      "apps/docs-api": {
+        "dependencies": [
+          "npm:@azure/data-tables@^13.3.0",
+          "npm:@azure/identity@^4.4.1",
+          "npm:fastify@^4.28.1"
+        ]
+      },
       "apps/mywebnicek": {
         "dependencies": [
           "jsr:@std/data-structures@1",
+          "npm:@azure/msal-browser@^3.26.1",
+          "npm:@azure/msal-react@^2.1.1",
           "npm:@deno/vite-plugin@1",
           "npm:@vitejs/plugin-react@^5.1.0",
           "npm:react-dom@^19.2.0",
           "npm:react@^19.2.0",
           "npm:vite@^6.3.5"
-        ],
-        "packageJson": {
-          "dependencies": [
-            "npm:@playwright/test@^1.59.1"
-          ]
-        }
+        ]
       },
       "packages/core": {
         "dependencies": [
@@ -767,11 +781,21 @@
           "npm:fast-check@^4.5.3"
         ]
       },
+      "packages/crypto": {
+        "dependencies": [
+          "npm:@noble/ed25519@^2.1.0"
+        ]
+      },
       "packages/react": {
         "dependencies": [
           "jsr:@mydenicek/core@0.5",
           "jsr:@mydenicek/sync@0.1",
           "npm:react@19"
+        ]
+      },
+      "packages/shared-auth": {
+        "dependencies": [
+          "npm:jose@^5.9.6"
         ]
       }
     }

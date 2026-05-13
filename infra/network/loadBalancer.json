@@ -1,0 +1,144 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "18379268004316703023"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the load balancer."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region."
+      }
+    },
+    "publicIpName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the public IP address resource."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('publicIpName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[replace(toLower(parameters('publicIpName')), '_', '-')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "frontend",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName'))]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "backendPool"
+          }
+        ],
+        "probes": [
+          {
+            "name": "httpHealthz",
+            "properties": {
+              "protocol": "Http",
+              "port": 8080,
+              "requestPath": "/healthz",
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            }
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "name": "rule-443-to-8080",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', parameters('name'), 'frontend')]"
+              },
+              "backendAddressPool": {
+                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', parameters('name'), 'backendPool')]"
+              },
+              "probe": {
+                "id": "[resourceId('Microsoft.Network/loadBalancers/probes', parameters('name'), 'httpHealthz')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 443,
+              "backendPort": 8080,
+              "enableFloatingIP": false,
+              "idleTimeoutInMinutes": 4,
+              "loadDistribution": "Default"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "lbId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/loadBalancers', parameters('name'))]"
+    },
+    "lbName": {
+      "type": "string",
+      "value": "[parameters('name')]"
+    },
+    "publicIpId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName'))]"
+    },
+    "publicIpAddress": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIpName')), '2023-11-01').ipAddress]"
+    },
+    "backendPoolId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/loadBalancers', parameters('name')), '2023-11-01').backendAddressPools[0].id]"
+    }
+  }
+}

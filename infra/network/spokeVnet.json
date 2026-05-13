@@ -1,0 +1,101 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "11420030237462987473"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the spoke VNet."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for the spoke VNet."
+      }
+    },
+    "addressPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Address prefix for the spoke (e.g. 10.1.0.0/16). Subnets are carved from this block."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "variables": {
+    "baseOctets": "[split(split(parameters('addressPrefix'), '/')[0], '.')]",
+    "base": "[format('{0}.{1}', variables('baseOctets')[0], variables('baseOctets')[1])]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-11-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "workload",
+            "properties": {
+              "addressPrefix": "[format('{0}.0.0/24', variables('base'))]"
+            }
+          },
+          {
+            "name": "pe",
+            "properties": {
+              "addressPrefix": "[format('{0}.1.0/24', variables('base'))]",
+              "privateEndpointNetworkPolicies": "Disabled"
+            }
+          },
+          {
+            "name": "lb",
+            "properties": {
+              "addressPrefix": "[format('{0}.2.0/24', variables('base'))]"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "vnetId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('name'))]"
+    },
+    "vnetName": {
+      "type": "string",
+      "value": "[parameters('name')]"
+    },
+    "workloadSubnetId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', parameters('name')), '2023-11-01').subnets[0].id]"
+    },
+    "peSubnetId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', parameters('name')), '2023-11-01').subnets[1].id]"
+    },
+    "lbSubnetId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', parameters('name')), '2023-11-01').subnets[2].id]"
+    }
+  }
+}

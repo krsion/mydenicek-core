@@ -1,0 +1,13 @@
+{
+  "name": "@mydenicek/shared-types",
+  "version": "0.1.0",
+  "description": "Shared TypeScript types for mydenicek security layers.",
+  "license": "MIT",
+  "exports": "./mod.ts",
+  "tasks": {
+    "fmt": "deno fmt .",
+    "fmt:check": "deno fmt --check .",
+    "lint": "deno lint .",
+    "check": "deno check mod.ts"
+  }
+}

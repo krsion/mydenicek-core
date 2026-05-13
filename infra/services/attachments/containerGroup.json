@@ -1,0 +1,138 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "12067268458788901096"
+    }
+  },
+  "parameters": {
+    "name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the container group."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region."
+      }
+    },
+    "acrLoginServer": {
+      "type": "string",
+      "metadata": {
+        "description": "Login server of the ACR (e.g. crmydenicek.azurecr.io)."
+      }
+    },
+    "imageTag": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Docker image tag to deploy."
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the storage account for blob delegation."
+      }
+    },
+    "appInsightsConnStr": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Insights connection string."
+      }
+    },
+    "authEnabled": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Whether to enable authentication in the app."
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Resource tags."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('name')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "osType": "Linux",
+        "restartPolicy": "Always",
+        "imageRegistryCredentials": [],
+        "containers": [
+          {
+            "name": "attachments",
+            "properties": {
+              "image": "[format('{0}/attachments:{1}', parameters('acrLoginServer'), parameters('imageTag'))]",
+              "ports": [
+                {
+                  "port": 3000,
+                  "protocol": "TCP"
+                }
+              ],
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGB": "[json('1.5')]"
+                }
+              },
+              "environmentVariables": [
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[parameters('appInsightsConnStr')]"
+                },
+                {
+                  "name": "AUTH_ENABLED",
+                  "value": "[string(parameters('authEnabled'))]"
+                },
+                {
+                  "name": "STORAGE_ACCOUNT_NAME",
+                  "value": "[parameters('storageAccountName')]"
+                }
+              ]
+            }
+          }
+        ],
+        "ipAddress": {
+          "type": "Public",
+          "ports": [
+            {
+              "port": 3000,
+              "protocol": "TCP"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "containerGroupId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ContainerInstance/containerGroups', parameters('name'))]"
+    },
+    "principalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('name')), '2023-05-01', 'full').identity.principalId]"
+    },
+    "ipAddress": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('name')), '2023-05-01').ipAddress.ip]"
+    }
+  }
+}
