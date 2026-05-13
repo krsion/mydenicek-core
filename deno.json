@@ -3,6 +3,8 @@
   "workspace": [
     "./packages/core",
     "./packages/react",
+    "./packages/shared-auth",
+    "./packages/shared-types",
     "./packages/sync",
     "./apps/sync-server",
     "./apps/mywebnicek"

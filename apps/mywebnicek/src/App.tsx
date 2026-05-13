@@ -2,6 +2,12 @@ import type { Denicek, PlainNode } from "@mydenicek/react";
 import { useDenicek } from "@mydenicek/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  AUTH_ENABLED,
+  getAccessToken,
+  getSignedInName,
+  signInWithMicrosoft,
+} from "./auth.ts";
 import { CommandBar } from "./CommandBar.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 import { EventGraphView } from "./EventGraphView.tsx";
@@ -21,7 +27,33 @@ const SYNC_SERVER_URL: string = VITE_SYNC_URL ??
 const HEALTH_URL = SYNC_SERVER_URL
   .replace(/^ws/, "http")
   .replace(/\/sync$/, "/healthz");
-fetch(HEALTH_URL).catch(() => {});
+
+function buildSyncUrl(
+  roomId: string,
+  accessToken?: string,
+  deviceId?: string,
+): string {
+  const url = new URL(SYNC_SERVER_URL);
+  url.searchParams.set("room", roomId);
+  if (deviceId) {
+    url.searchParams.set("device_id", deviceId);
+  }
+  if (AUTH_ENABLED && accessToken) {
+    url.searchParams.set("access_token", accessToken);
+  }
+  return url.toString();
+}
+
+function fetchWithAuth(input: string, accessToken?: string): Promise<Response> {
+  if (AUTH_ENABLED && accessToken) {
+    return fetch(input, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
+  return fetch(input);
+}
 
 const PEER_SESSION_KEY = "mydenicek-peer-id";
 
@@ -44,11 +76,12 @@ const statusColors: Record<string, string> = {
 const defaultPanels = { rendered: true, raw: true, events: true };
 
 function Editor(
-  { peerId, roomId, initialDocument, runInitActions }: {
+  { peerId, roomId, initialDocument, runInitActions, accessToken }: {
     peerId: string;
     roomId: string;
     initialDocument?: PlainNode;
     runInitActions?: (dk: Denicek) => void;
+    accessToken?: string;
   },
 ) {
   // If no initial document, fetch it from the sync server hello
@@ -71,9 +104,7 @@ function Editor(
     // sync — after which the server silently excludes it from broadcasts.
     const openOnce = () => {
       if (cancelled) return;
-      const url = new URL(SYNC_SERVER_URL);
-      url.searchParams.set("room", roomId);
-      const ws = new WebSocket(url.toString());
+      const ws = new WebSocket(buildSyncUrl(roomId, accessToken, peerId));
       currentWs = ws;
       ws.onmessage = (ev) => {
         try {
@@ -107,7 +138,7 @@ function Editor(
       if (retryTimer !== null) clearTimeout(retryTimer);
       currentWs?.close();
     };
-  }, [initialDocument, roomId]);
+  }, [accessToken, initialDocument, peerId, roomId]);
 
   if (loading) {
     return (
@@ -123,22 +154,24 @@ function Editor(
       roomId={roomId}
       initialDocument={resolvedDoc}
       runInitActions={runInitActions}
+      accessToken={accessToken}
     />
   );
 }
 
 function EditorInner(
-  { peerId, roomId, initialDocument, runInitActions }: {
+  { peerId, roomId, initialDocument, runInitActions, accessToken }: {
     peerId: string;
     roomId: string;
     initialDocument?: PlainNode;
     runInitActions?: (dk: Denicek) => void;
+    accessToken?: string;
   },
 ) {
   const dk = useDenicek({
     peer: peerId,
     initialDocument,
-    sync: { url: SYNC_SERVER_URL, roomId },
+    sync: { url: buildSyncUrl(roomId, accessToken, peerId), roomId },
   });
 
   // Run init actions once and flush to server immediately
@@ -378,6 +411,22 @@ function createTab(template: Template): DocTab {
 
 export function App() {
   const peerId = useMemo(getOrCreatePeerId, []);
+  const [accessToken, setAccessToken] = useState<string | undefined>();
+  const [signedInName, setSignedInName] = useState<string | undefined>(
+    getSignedInName(),
+  );
+
+  useEffect(() => {
+    fetchWithAuth(HEALTH_URL, accessToken).catch(() => {});
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (!AUTH_ENABLED) return;
+    getAccessToken().then((token) => {
+      if (token) setAccessToken(token);
+      setSignedInName(getSignedInName());
+    }).catch(() => {});
+  }, []);
 
   const [tabs, setTabs] = useState<DocTab[]>(() => {
     const hash = globalThis.location?.hash?.slice(1);
@@ -476,6 +525,30 @@ export function App() {
             + {tpl.name}
           </button>
         ))}
+        {AUTH_ENABLED && (
+          <button
+            type="button"
+            onClick={async () => {
+              const token = await signInWithMicrosoft();
+              setAccessToken(token);
+              setSignedInName(getSignedInName());
+            }}
+            style={{
+              marginLeft: "auto",
+              padding: "4px 8px",
+              fontSize: 11,
+              cursor: "pointer",
+              background: "#0078d4",
+              color: "#fff",
+              border: "none",
+              borderRadius: 4,
+            }}
+          >
+            {signedInName
+              ? `Signed in: ${signedInName}`
+              : "Sign in with Microsoft"}
+          </button>
+        )}
       </div>
 
       {/* Active editor or landing */}
@@ -488,6 +561,7 @@ export function App() {
               roomId={tab.id}
               initialDocument={tab.template?.initialDocument}
               runInitActions={tab.template?.initActions}
+              accessToken={accessToken}
             />
           )
           : (

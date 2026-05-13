@@ -11,6 +11,8 @@
     "@std/data-structures/binary-heap": "jsr:@std/data-structures@^1/binary-heap",
     "react": "npm:react@^19.2.0",
     "react-dom": "npm:react-dom@^19.2.0",
+    "@azure/msal-browser": "npm:@azure/msal-browser@^3.28.0",
+    "@azure/msal-react": "npm:@azure/msal-react@^2.4.20",
     "react/jsx-runtime": "npm:react@^19.2.0/jsx-runtime",
     "@vitejs/plugin-react": "npm:@vitejs/plugin-react@^5.1.0",
     "vite": "npm:vite@^6.3.5",

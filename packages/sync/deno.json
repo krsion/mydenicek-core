@@ -15,6 +15,7 @@
     "test": "deno test --allow-read --allow-write --allow-net tests"
   },
   "imports": {
-    "@std/assert": "../../tools/deno_std/assert.ts"
+    "@std/assert": "../../tools/deno_std/assert.ts",
+    "@mydenicek/shared-auth": "../shared-auth/mod.ts"
   }
 }

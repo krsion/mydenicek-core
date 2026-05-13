@@ -1,0 +1,5 @@
+requests
+| where TimeGenerated > ago(24h)
+| where duration > 1000ms
+| summarize avgDuration = avg(duration), p95 = percentile(duration, 95) by operation_Name
+| order by p95 desc

@@ -5,20 +5,15 @@ WORKDIR /app
 COPY deno.json deno.lock ./
 COPY apps/sync-server ./apps/sync-server
 COPY packages/core ./packages/core
-COPY packages/react ./packages/react
-COPY packages/shared-auth ./packages/shared-auth
 COPY packages/sync ./packages/sync
-
-# Create stub workspace member that the sync server doesn't need
-RUN mkdir -p apps/mywebnicek && \
-    echo '{}' > apps/mywebnicek/deno.json
+COPY packages/shared-auth ./packages/shared-auth
 
 RUN deno cache apps/sync-server/main.ts
 
+ENV PORT=8787
 ENV HOSTNAME=0.0.0.0
-ENV PORT=8080
-ENV PERSISTENCE_PATH=/home/site/data
+ENV AUTH_ENABLED=false
 
-EXPOSE 8080
+EXPOSE 8787
 
 CMD ["run", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "apps/sync-server/main.ts"]

@@ -1,0 +1,26 @@
+name: Scheduled Teardown
+
+on:
+  schedule:
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  teardown:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Delete expensive service resource groups
+        run: |
+          az group delete -n mydenicek-sync-compute-rg --yes --no-wait
+          az group delete -n mydenicek-docs-api-compute-rg --yes --no-wait
+          az group delete -n mydenicek-acl-compute-rg --yes --no-wait
+          az group delete -n mydenicek-attachments-compute-rg --yes --no-wait

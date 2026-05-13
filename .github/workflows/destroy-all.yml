@@ -1,0 +1,33 @@
+name: Destroy All (dev)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type DESTROY to continue
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    if: ${{ inputs.confirmation == 'DESTROY' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Delete dev resource groups
+        run: |
+          az group delete -n mydenicek-dev-shared-rg --yes --no-wait
+          az group delete -n mydenicek-network-rg --yes --no-wait
+          az group delete -n mydenicek-sync-rg --yes --no-wait
+          az group delete -n mydenicek-docs-api-rg --yes --no-wait
+          az group delete -n mydenicek-acl-rg --yes --no-wait
+          az group delete -n mydenicek-attachments-rg --yes --no-wait
+          az group delete -n mydenicek-monitor-rg --yes --no-wait
