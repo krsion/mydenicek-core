@@ -18,6 +18,7 @@
   "imports": {
     "react": "npm:react@^19.0.0",
     "@mydenicek/core": "jsr:@mydenicek/core@^0.5",
-    "@mydenicek/sync": "jsr:@mydenicek/sync@^0.1"
+    "@mydenicek/sync": "jsr:@mydenicek/sync@^0.1",
+    "@mydenicek/shared-types": "../shared-types/mod.ts"
   }
 }

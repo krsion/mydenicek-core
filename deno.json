@@ -2,8 +2,11 @@
   "nodeModulesDir": "auto",
   "workspace": [
     "./packages/core",
+    "./packages/shared-types",
+    "./packages/crypto",
     "./packages/react",
     "./packages/sync",
+    "./apps/acl",
     "./apps/sync-server",
     "./apps/mywebnicek"
   ],

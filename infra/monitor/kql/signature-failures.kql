@@ -1,0 +1,4 @@
+AppTraces
+| where TimeGenerated > ago(5m)
+| where Message has "Invalid event signature" or Message has "Signed events are required"
+| summarize failures = count()

@@ -1,5 +1,6 @@
 import type { Denicek, PlainNode, RemoteEvent } from "@mydenicek/core";
 import type { EncodedRemoteEvent, EncodedRemoteEventId } from "@mydenicek/core";
+import type { SignedEvent } from "@mydenicek/shared-types";
 import { collectRemoteEventsSince } from "./internal-events.ts";
 
 /** Encoded event identifier (opaque string). */
@@ -17,6 +18,8 @@ export interface EncodedSyncRequest {
   frontiers: string[];
   /** New events the client wants to send. */
   events: EncodedEvent[];
+  /** Signed events used when AUTH_ENABLED is active on the server. */
+  signedEvents?: SignedEvent[];
   /** Hash of the client's initial document (before any events). */
   initialDocumentHash?: string;
   /** The initial document tree. Sent with the first sync to bootstrap the room. */

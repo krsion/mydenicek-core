@@ -1,6 +1,7 @@
 import type { Denicek, PlainNode } from "@mydenicek/react";
 import { useDenicek } from "@mydenicek/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { SignedEvent, UnsignedEvent } from "@mydenicek/shared-types";
 
 import { CommandBar } from "./CommandBar.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
@@ -8,9 +9,20 @@ import { EventGraphView } from "./EventGraphView.tsx";
 import { INITIAL_DOCUMENT, initializeActions } from "./initializeDocument.ts";
 import { RawDocumentView } from "./RawDocumentView.tsx";
 import { RenderedDocument } from "./RenderedDocument.tsx";
+import {
+  clearStoredKeypair,
+  type DeviceKeypair,
+  getOrCreateDeviceIdentity,
+  revokePeerKey,
+  signOutgoingEvent,
+} from "./security.ts";
 
 // @ts-ignore: Vite injects import.meta.env at build time
 const VITE_SYNC_URL: string | undefined = import.meta.env?.VITE_SYNC_URL;
+// @ts-ignore: Vite injects import.meta.env at build time
+const VITE_ACL_URL: string = import.meta.env?.VITE_ACL_URL ?? "/api/acl";
+// @ts-ignore: Vite injects import.meta.env at build time
+const VITE_AUTH_ENABLED: boolean = import.meta.env?.VITE_AUTH_ENABLED === "true";
 const SYNC_SERVER_URL: string = VITE_SYNC_URL ??
   (globalThis.location?.hostname === "localhost"
     ? "ws://localhost:8787/sync"
@@ -34,6 +46,11 @@ function getOrCreatePeerId(): string {
   return id;
 }
 
+interface AuthBootstrap {
+  oid: string;
+  token: string;
+}
+
 const statusColors: Record<string, string> = {
   connected: "#107c10",
   connecting: "#ca5010",
@@ -44,11 +61,20 @@ const statusColors: Record<string, string> = {
 const defaultPanels = { rendered: true, raw: true, events: true };
 
 function Editor(
-  { peerId, roomId, initialDocument, runInitActions }: {
+  {
+    peerId,
+    roomId,
+    initialDocument,
+    runInitActions,
+    signUnsignedEvent,
+    authDeviceGuid,
+  }: {
     peerId: string;
     roomId: string;
     initialDocument?: PlainNode;
     runInitActions?: (dk: Denicek) => void;
+    signUnsignedEvent?: (event: UnsignedEvent) => Promise<SignedEvent>;
+    authDeviceGuid?: string;
   },
 ) {
   // If no initial document, fetch it from the sync server hello
@@ -123,22 +149,39 @@ function Editor(
       roomId={roomId}
       initialDocument={resolvedDoc}
       runInitActions={runInitActions}
+      signUnsignedEvent={signUnsignedEvent}
+      authDeviceGuid={authDeviceGuid}
     />
   );
 }
 
 function EditorInner(
-  { peerId, roomId, initialDocument, runInitActions }: {
+  {
+    peerId,
+    roomId,
+    initialDocument,
+    runInitActions,
+    signUnsignedEvent,
+    authDeviceGuid,
+  }: {
     peerId: string;
     roomId: string;
     initialDocument?: PlainNode;
     runInitActions?: (dk: Denicek) => void;
+    signUnsignedEvent?: (event: UnsignedEvent) => Promise<SignedEvent>;
+    authDeviceGuid?: string;
   },
 ) {
   const dk = useDenicek({
     peer: peerId,
     initialDocument,
-    sync: { url: SYNC_SERVER_URL, roomId },
+    sync: {
+      url: SYNC_SERVER_URL,
+      roomId,
+      authPeerId: signUnsignedEvent ? peerId : undefined,
+      signUnsignedEvent,
+      authDeviceGuid,
+    },
   });
 
   // Run init actions once and flush to server immediately
@@ -377,7 +420,48 @@ function createTab(template: Template): DocTab {
 }
 
 export function App() {
-  const peerId = useMemo(getOrCreatePeerId, []);
+  const [authBootstrap, setAuthBootstrap] = useState<AuthBootstrap | null>(
+    null,
+  );
+  const [deviceKeypair, setDeviceKeypair] = useState<DeviceKeypair | null>(
+    null,
+  );
+  const [peerId, setPeerId] = useState(() => getOrCreatePeerId());
+
+  useEffect(() => {
+    if (!VITE_AUTH_ENABLED) return;
+    const oid = globalThis.sessionStorage?.getItem("mydenicek.auth.oid") ?? "";
+    const token = globalThis.sessionStorage?.getItem("mydenicek.auth.token") ??
+      "";
+    if (!oid || !token) {
+      return;
+    }
+    const auth: AuthBootstrap = { oid, token };
+    setAuthBootstrap(auth);
+    getOrCreateDeviceIdentity(auth, VITE_ACL_URL).then(
+      ({ keypair, peerId }) => {
+        setDeviceKeypair(keypair);
+        setPeerId(peerId);
+      },
+    ).catch((error) => {
+      console.error("Failed to initialize device identity", error);
+    });
+  }, []);
+
+  const signUnsignedEvent = useMemo(() => {
+    if (!VITE_AUTH_ENABLED || !deviceKeypair) return undefined;
+    return (event: UnsignedEvent) => signOutgoingEvent(event, deviceKeypair);
+  }, [deviceKeypair]);
+
+  const handleForgetDevice = useCallback(async () => {
+    if (!authBootstrap || !deviceKeypair) return;
+    if (!globalThis.confirm("Forget this device and revoke its signing key?")) {
+      return;
+    }
+    await revokePeerKey(VITE_ACL_URL, authBootstrap, deviceKeypair.deviceGuid);
+    await clearStoredKeypair();
+    setDeviceKeypair(null);
+  }, [authBootstrap, deviceKeypair]);
 
   const [tabs, setTabs] = useState<DocTab[]>(() => {
     const hash = globalThis.location?.hash?.slice(1);
@@ -476,6 +560,24 @@ export function App() {
             + {tpl.name}
           </button>
         ))}
+        {VITE_AUTH_ENABLED && (
+          <button
+            type="button"
+            onClick={handleForgetDevice}
+            style={{
+              marginLeft: "auto",
+              padding: "4px 8px",
+              fontSize: 11,
+              cursor: "pointer",
+              background: "transparent",
+              color: "#a4262c",
+              border: "1px solid #d0d0d0",
+              borderRadius: 4,
+            }}
+          >
+            Sign out &amp; forget this device
+          </button>
+        )}
       </div>
 
       {/* Active editor or landing */}
@@ -488,6 +590,8 @@ export function App() {
               roomId={tab.id}
               initialDocument={tab.template?.initialDocument}
               runInitActions={tab.template?.initActions}
+              signUnsignedEvent={signUnsignedEvent}
+              authDeviceGuid={deviceKeypair?.deviceGuid}
             />
           )
           : (

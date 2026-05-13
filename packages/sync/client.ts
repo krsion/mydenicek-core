@@ -1,4 +1,5 @@
 import type { Denicek, PlainNode } from "@mydenicek/core";
+import type { SignedEvent, UnsignedEvent } from "@mydenicek/shared-types";
 import {
   applySyncResponse,
   createSyncRequest,
@@ -83,6 +84,12 @@ export interface SyncClientOptions {
   onRemoteChange?: (document: Denicek, response: EncodedSyncResponse) => void;
   /** Called when the WebSocket connection closes (both explicit and unexpected). */
   onDisconnect?: () => void;
+  /** Stable peer ID bound to authenticated identity when auth is enabled. */
+  authPeerId?: string;
+  /** Optional signer used to attach Ed25519 signatures to outbound events. */
+  signUnsignedEvent?: (event: UnsignedEvent) => Promise<SignedEvent>;
+  /** Optional device GUID used for auth-bound socket identity. */
+  authDeviceGuid?: string;
 }
 
 /**
@@ -102,6 +109,11 @@ export class SyncClient {
     response: EncodedSyncResponse,
   ) => void;
   private readonly onDisconnect?: () => void;
+  private readonly authPeerId?: string;
+  private readonly signUnsignedEvent?: (
+    event: UnsignedEvent,
+  ) => Promise<SignedEvent>;
+  private readonly authDeviceGuid?: string;
   private socket: WebSocket | null = null;
   private connecting = false;
   private autoSyncTimer: ReturnType<typeof setInterval> | null = null;
@@ -112,7 +124,12 @@ export class SyncClient {
 
   /** Create a sync client with the given options. */
   constructor(options: SyncClientOptions) {
-    this.url = this.buildSyncUrl(options.url, options.roomId);
+    this.url = this.buildSyncUrl(
+      options.url,
+      options.roomId,
+      options.authPeerId,
+      options.authDeviceGuid,
+    );
     this.roomId = options.roomId;
     this.document = options.document;
     this.autoSyncIntervalMs = options.autoSyncIntervalMs ?? 1000;
@@ -122,6 +139,9 @@ export class SyncClient {
     this.initialDocumentHash = options.initialDocumentHash ?? null;
     this.onRemoteChange = options.onRemoteChange;
     this.onDisconnect = options.onDisconnect;
+    this.authPeerId = options.authPeerId;
+    this.signUnsignedEvent = options.signUnsignedEvent;
+    this.authDeviceGuid = options.authDeviceGuid;
   }
 
   /** Whether sync is currently paused. */
@@ -154,9 +174,20 @@ export class SyncClient {
   }
 
   /** Build the full WebSocket URL with room query parameter. */
-  private buildSyncUrl(baseUrl: string, roomId: string): string {
+  private buildSyncUrl(
+    baseUrl: string,
+    roomId: string,
+    authPeerId?: string,
+    authDeviceGuid?: string,
+  ): string {
     const url = new URL(baseUrl);
     url.searchParams.set("room", roomId);
+    if (authPeerId) {
+      url.searchParams.set("peerId", authPeerId);
+    }
+    if (authDeviceGuid) {
+      url.searchParams.set("deviceGuid", authDeviceGuid);
+    }
     return url.toString();
   }
 
@@ -215,6 +246,23 @@ export class SyncClient {
       this.initialDocumentHash,
       this.serverBootstrapped ? undefined : this.initialDocument,
     );
+    if (this.authPeerId) {
+      request.peerId = this.authPeerId;
+    }
+    if (this.signUnsignedEvent) {
+      request.signedEvents = await Promise.all(
+        request.events.map((event) =>
+          this.signUnsignedEvent!({
+            docId: this.roomId,
+            author: this.authPeerId ?? this.document.peer,
+            payload: event,
+            predecessors: event.parents.map((parent) =>
+              btoa(`${parent.peer}:${parent.seq}`)
+            ),
+          })
+        ),
+      );
+    }
     this.socket.send(JSON.stringify(request));
   }
 

@@ -1,0 +1,13 @@
+{
+  "name": "@mydenicek/shared-types",
+  "version": "0.1.0",
+  "description": "Shared security and sync envelope types for mydenicek.",
+  "license": "MIT",
+  "exports": "./mod.ts",
+  "tasks": {
+    "fmt": "deno fmt mod.ts deno.json",
+    "fmt:check": "deno fmt --check mod.ts deno.json",
+    "lint": "deno lint mod.ts",
+    "check": "deno check mod.ts"
+  }
+}

@@ -4,6 +4,9 @@ import type {
   EncodedHelloMessage,
   EncodedSyncRequest,
 } from "./protocol.ts";
+import { createAclClient } from "./src/acl-client.ts";
+import { isAuthEnabled, resolveConnectionIdentity } from "./src/auth.ts";
+import { validateInboundSignedEvents } from "./src/guard.ts";
 import { SyncRoom } from "./room.ts";
 
 /** Persisted room metadata (written once on creation, rewritten on compaction). */
@@ -50,6 +53,10 @@ type ClientState = {
   frontiers: string[];
   /** Whether this client has passed initial document hash validation. */
   hashValidated: boolean;
+  docId: string;
+  role: "viewer" | "editor";
+  peerId: string;
+  oid: string;
 };
 
 function buildMetaFilePath(persistencePath: string, roomId: string): string {
@@ -161,6 +168,7 @@ export function createSyncServer(
   const clients = new Map<WebSocket, ClientState>();
   const pendingRoomWrites = new Map<string, Promise<void>>();
   const roomLastActivity = new Map<string, number>();
+  const aclClient = createAclClient();
 
   const ROOM_EVICTION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
   const EVICTION_INTERVAL_MS = 60_000;
@@ -239,14 +247,19 @@ export function createSyncServer(
     return undefined;
   }
 
-  function broadcastRoomState(changedSocket: WebSocket, room: SyncRoom): void {
+  function broadcastRoomState(
+    changedSocket: WebSocket,
+    room: SyncRoom,
+    eventDocId: string,
+  ): void {
     for (const [socket, state] of clients.entries()) {
       // The originating socket already receives its direct sync response in the
       // request handler below, so broadcasting only forwards the merged state
       // to the other sockets in the same room.
       if (
         socket === changedSocket || state.roomId !== room.id ||
-        socket.readyState !== WebSocket.OPEN || !state.hashValidated
+        socket.readyState !== WebSocket.OPEN || !state.hashValidated ||
+        state.docId !== eventDocId
       ) {
         continue;
       }
@@ -313,14 +326,37 @@ export function createSyncServer(
     const { socket, response } = Deno.upgradeWebSocket(request);
 
     socket.onopen = async () => {
-      clients.set(socket, { roomId, frontiers: [], hashValidated: false });
-      const existingRoom = await tryLoadRoom(roomId);
-      const helloMessage: EncodedHelloMessage = {
-        type: "hello",
-        roomId,
-        initialDocument: existingRoom?.initialDocument,
-      };
-      socket.send(JSON.stringify(helloMessage));
+      try {
+        const identity = await resolveConnectionIdentity(request, roomId);
+        const role = isAuthEnabled()
+          ? await aclClient.getRole(roomId, identity.oid)
+          : "editor";
+        if (role === null) {
+          socket.close(1008, "Access denied");
+          return;
+        }
+        clients.set(socket, {
+          roomId,
+          frontiers: [],
+          hashValidated: false,
+          docId: roomId,
+          role,
+          peerId: identity.peerId,
+          oid: identity.oid,
+        });
+        const existingRoom = await tryLoadRoom(roomId);
+        const helloMessage: EncodedHelloMessage = {
+          type: "hello",
+          roomId,
+          initialDocument: existingRoom?.initialDocument,
+        };
+        socket.send(JSON.stringify(helloMessage));
+      } catch (error) {
+        socket.close(
+          1008,
+          error instanceof Error ? error.message : "Access denied",
+        );
+      }
     };
 
     socket.onmessage = async (event) => {
@@ -334,7 +370,10 @@ export function createSyncServer(
           );
         }
         const clientState = clients.get(socket);
-        const clientRoomId = clientState?.roomId ?? roomId;
+        if (clientState === undefined) {
+          throw new Error("Connection is not authenticated.");
+        }
+        const clientRoomId = clientState.roomId;
         if (message.roomId !== clientRoomId) {
           throw new Error(
             `Socket for room '${clientRoomId}' cannot sync room '${message.roomId}'.`,
@@ -362,17 +401,36 @@ export function createSyncServer(
         if (clientState !== undefined) {
           clientState.hashValidated = true;
         }
+        if (isAuthEnabled() && !message.signedEvents) {
+          throw new Error("Signed events are required when AUTH_ENABLED=true.");
+        }
+        const normalizedEvents = message.signedEvents
+          ? await validateInboundSignedEvents({
+            acl: aclClient,
+            connection: {
+              docId: clientState.docId,
+              oid: clientState.oid,
+              peerId: clientState.peerId,
+              role: clientState.role,
+            },
+            signedEvents: message.signedEvents,
+            onPolicyViolation: (policyMessage: string) =>
+              socket.close(1008, policyMessage),
+          })
+          : message.events;
         const responseMessage = room.computeSyncResponse({
           ...message,
           roomId: clientRoomId,
+          peerId: clientState.peerId,
+          events: normalizedEvents,
         });
         if (clientState !== undefined) {
           clientState.roomId = room.id;
           clientState.frontiers = responseMessage.frontiers;
         }
         socket.send(JSON.stringify(responseMessage));
-        enqueueEventAppend(clientRoomId, message.events);
-        broadcastRoomState(socket, room);
+        enqueueEventAppend(clientRoomId, normalizedEvents);
+        broadcastRoomState(socket, room, clientState.docId);
       } catch (error) {
         socket.send(JSON.stringify({
           type: "error",

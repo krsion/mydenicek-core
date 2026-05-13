@@ -12,9 +12,11 @@
     "fmt:check": "deno fmt --check .",
     "lint": "deno lint .",
     "check": "deno check mod.ts",
-    "test": "deno test --allow-read --allow-write --allow-net tests"
+    "test": "deno test --allow-read --allow-write --allow-net --allow-env tests"
   },
   "imports": {
-    "@std/assert": "../../tools/deno_std/assert.ts"
+    "@std/assert": "../../tools/deno_std/assert.ts",
+    "@mydenicek/shared-types": "../shared-types/mod.ts",
+    "@mydenicek/crypto": "../crypto/mod.ts"
   }
 }
