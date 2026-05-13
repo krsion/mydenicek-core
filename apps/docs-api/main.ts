@@ -84,6 +84,7 @@ function buildServer(): FastifyInstance {
   app.get("/healthz", async () => ({ status: "ok" }));
 
   // GET /docs — list the authenticated user's docs
+  // TODO: add @fastify/rate-limit when deploying without an upstream API gateway.
   app.get("/docs", async (request) => {
     const { oid } = requireClaims(request);
     const entities = table.listEntities<Doc & { partitionKey: string; rowKey: string }>({

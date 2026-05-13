@@ -94,6 +94,7 @@ function buildServer(): FastifyInstance {
   // -------------------------------------------------------------------------
 
   // GET /docs/:id/members
+  // TODO: add @fastify/rate-limit when deploying without an upstream API gateway.
   app.get(
     "/docs/:id/members",
     async (request: FastifyRequest<{ Params: { id: string } }>) => {

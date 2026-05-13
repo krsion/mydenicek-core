@@ -129,6 +129,7 @@ function buildServer(): FastifyInstance {
   app.get("/healthz", async () => ({ status: "ok" }));
 
   // POST /attachments — returns a pre-signed upload URL
+  // TODO: add @fastify/rate-limit when deploying without an upstream API gateway.
   app.post(
     "/attachments",
     async (
