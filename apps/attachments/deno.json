@@ -1,0 +1,16 @@
+{
+  "name": "@mydenicek/attachments",
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env src/main.ts",
+    "check": "deno check src/main.ts",
+    "fmt": "deno fmt src deno.json",
+    "fmt:check": "deno fmt --check src deno.json",
+    "lint": "deno lint src"
+  },
+  "imports": {
+    "fastify": "npm:fastify@^5.2.1",
+    "@azure/storage-blob": "npm:@azure/storage-blob@^12.26.0",
+    "@azure/identity": "npm:@azure/identity@^4.7.0",
+    "@mydenicek/shared-auth": "../../packages/shared-auth/mod.ts"
+  }
+}

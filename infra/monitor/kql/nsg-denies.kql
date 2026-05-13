@@ -1,0 +1,6 @@
+AzureDiagnostics
+| where TimeGenerated > ago(24h)
+| where Category == 'NetworkSecurityGroupFlowEvent'
+| where FlowState_s == 'D'
+| summarize denies = count() by SourceIP_s, DestinationIP_s, DestinationPort_d
+| order by denies desc

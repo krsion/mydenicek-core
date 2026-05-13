@@ -1,0 +1,5 @@
+SigninLogs
+| where TimeGenerated > ago(24h)
+| where ResultType != 0
+| summarize failures = count() by UserPrincipalName, AppDisplayName
+| order by failures desc

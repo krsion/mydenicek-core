@@ -1,0 +1,35 @@
+name: Deploy Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Service to deploy
+        required: true
+        type: choice
+        options:
+          - sync
+          - docs-api
+          - acl
+          - attachments
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Build and push image
+        run: |
+          IMAGE=${{ vars.ACR_LOGIN_SERVER }}/${{ inputs.service }}:${{ github.sha }}
+          az acr build --registry ${{ vars.ACR_NAME }} --image $IMAGE -f apps/${{ inputs.service }}/Dockerfile .
+      - name: Deploy service bicep
+        run: az deployment sub create --location westeurope --template-file infra/services/${{ inputs.service }}/main.bicep --parameters acrLoginServer=${{ vars.ACR_LOGIN_SERVER }} imageTag=${{ github.sha }}

@@ -4,6 +4,7 @@ import type {
   EncodedHelloMessage,
   EncodedSyncRequest,
 } from "./protocol.ts";
+import { resolveAuthenticatedPeer } from "./src/auth.ts";
 import { SyncRoom } from "./room.ts";
 
 /** Persisted room metadata (written once on creation, rewritten on compaction). */
@@ -50,6 +51,7 @@ type ClientState = {
   frontiers: string[];
   /** Whether this client has passed initial document hash validation. */
   hashValidated: boolean;
+  authenticatedPeerId?: string;
 };
 
 function buildMetaFilePath(persistencePath: string, roomId: string): string {
@@ -284,7 +286,7 @@ export function createSyncServer(
     return next;
   }
 
-  const server = Deno.serve({ port, hostname }, (request) => {
+  const server = Deno.serve({ port, hostname }, async (request) => {
     const url = new URL(request.url);
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
@@ -310,10 +312,24 @@ export function createSyncServer(
       });
     }
 
+    let authenticatedPeerId: string | undefined;
+    try {
+      const authenticatedPeer = await resolveAuthenticatedPeer(request, url);
+      authenticatedPeerId = authenticatedPeer?.peerId;
+    } catch (error) {
+      console.error("Authentication failed for websocket upgrade:", error);
+      return new Response("Unauthorized", { status: 401 });
+    }
+
     const { socket, response } = Deno.upgradeWebSocket(request);
 
     socket.onopen = async () => {
-      clients.set(socket, { roomId, frontiers: [], hashValidated: false });
+      clients.set(socket, {
+        roomId,
+        frontiers: [],
+        hashValidated: false,
+        authenticatedPeerId,
+      });
       const existingRoom = await tryLoadRoom(roomId);
       const helloMessage: EncodedHelloMessage = {
         type: "hello",

@@ -1,0 +1,6 @@
+AppTraces
+| where TimeGenerated > ago(24h)
+| where Message has 'vector clock'
+| where Message has 'gap'
+| project TimeGenerated, Message, SeverityLevel
+| order by TimeGenerated desc

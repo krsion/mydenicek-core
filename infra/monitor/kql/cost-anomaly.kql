@@ -1,0 +1,4 @@
+CostManagement
+| where TimeGenerated > ago(30d)
+| summarize dailyCost = sum(CostInBillingCurrency) by bin(TimeGenerated, 1d)
+| extend movingAvg = series_fir(make_list(dailyCost), dynamic([0.2,0.2,0.2,0.2,0.2]))
