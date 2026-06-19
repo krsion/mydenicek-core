@@ -1,4 +1,5 @@
 import { Denicek, type PlainNode } from "@mydenicek/core";
+import { CausalStabilityTracker, VectorClock } from "@mydenicek/core/internal";
 import {
   decodeEvent,
   type EncodedEvent,
@@ -35,6 +36,13 @@ export class SyncRoom {
   private compactedFrontier: string[] | null = null;
   /** Tracks peers that have already received a compacted-reset response. */
   private peersResetAfterCompaction: Set<string> = new Set();
+
+  /**
+   * Principled causal stability tracking following Bauwens & Gonzalez Boix
+   * ("From Causality to Stability", MPLR 2020). Tracks which events all
+   * known peers have observed, enabling stability-based compaction decisions.
+   */
+  readonly stability: CausalStabilityTracker = new CausalStabilityTracker();
 
   /** Peers inactive longer than this are excluded from compaction consensus. */
   static readonly PEER_ACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -172,6 +180,14 @@ export class SyncRoom {
     // Update peer frontier after ingesting their events
     if (peerId) {
       this.peerFrontiers.set(peerId, this.roomPeer.frontiers);
+
+      // Update causal stability tracker with the peer's observation progress.
+      // The frontier clock represents the latest causal state this peer knows.
+      const clockRecord = this.roomPeer.frontierClock;
+      this.stability.updateRemoteClock(
+        peerId,
+        new VectorClock(clockRecord),
+      );
     }
 
     return {
@@ -297,5 +313,14 @@ export class SyncRoom {
   /** Return all events stored in this room as encoded events. */
   listEncodedEvents(): EncodedEvent[] {
     return collectRemoteEventsSince(this.roomPeer, []).map(encodeEvent);
+  }
+
+  /**
+   * Notify the room that a peer has disconnected. Removes the peer from
+   * the causal stability tracker so that a departed peer does not block
+   * stability detection for the remaining active peers.
+   */
+  peerDisconnected(peerId: string): void {
+    this.stability.removePeer(peerId);
   }
 }

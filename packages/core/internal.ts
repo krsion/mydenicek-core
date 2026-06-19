@@ -40,3 +40,4 @@ export {
 } from "./core/primitive-edits.ts";
 export { Selector } from "./core/selector.ts";
 export { VectorClock } from "./core/vector-clock.ts";
+export { CausalStabilityTracker } from "./core/causal-stability.ts";

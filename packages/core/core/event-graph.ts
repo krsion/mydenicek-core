@@ -119,6 +119,19 @@ export class EventGraph {
     return [...this._frontierIds];
   }
 
+  /** Returns the merged vector clock of all frontier events. */
+  frontierClock(): Record<string, number> {
+    const merged: Record<string, number> = {};
+    for (const fId of this._frontierIds) {
+      const ev = this.events.get(fId.format());
+      if (!ev) continue;
+      for (const [peer, seq] of ev.clock.entryRecords()) {
+        merged[peer] = Math.max(merged[peer] ?? -1, seq);
+      }
+    }
+    return merged;
+  }
+
   /** Number of committed events in the graph (excludes buffered out-of-order events). */
   get eventCount(): number {
     let count = 0;

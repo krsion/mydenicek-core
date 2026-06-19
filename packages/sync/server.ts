@@ -50,6 +50,8 @@ type ClientState = {
   frontiers: string[];
   /** Whether this client has passed initial document hash validation. */
   hashValidated: boolean;
+  /** Peer ID from the first sync message, used for stability tracking on disconnect. */
+  peerId?: string;
 };
 
 function buildMetaFilePath(persistencePath: string, roomId: string): string {
@@ -369,6 +371,9 @@ export function createSyncServer(
         if (clientState !== undefined) {
           clientState.roomId = room.id;
           clientState.frontiers = responseMessage.frontiers;
+          if (message.peerId && !clientState.peerId) {
+            clientState.peerId = message.peerId;
+          }
         }
         socket.send(JSON.stringify(responseMessage));
         enqueueEventAppend(clientRoomId, message.events);
@@ -382,7 +387,14 @@ export function createSyncServer(
       }
     };
 
-    socket.onclose = () => {
+    socket.onclose = async () => {
+      const state = clients.get(socket);
+      if (state?.peerId && state.roomId) {
+        try {
+          const room = await ensureRoomLoaded(state.roomId);
+          room.peerDisconnected(state.peerId);
+        } catch { /* room may have been evicted */ }
+      }
       clients.delete(socket);
     };
 

@@ -212,6 +212,16 @@ export class Denicek {
     return this.graph.frontiers.map((eventId) => eventId.format());
   }
 
+  /**
+   * Returns the merged vector clock of all frontier events.
+   * This represents the latest causal state known to this replica —
+   * useful for communicating observation progress in the causal
+   * stability protocol (Bauwens & Gonzalez Boix, MPLR 2020).
+   */
+  get frontierClock(): Record<string, number> {
+    return this.graph.frontierClock();
+  }
+
   /** Number of committed events in the underlying graph. */
   get eventCount(): number {
     return this.graph.eventCount;
